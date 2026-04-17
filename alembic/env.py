@@ -1,14 +1,13 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
-
 from alembic import context
+from kartochka.config import settings
 from kartochka.database import Base
 from kartochka.models import Generation, Template, User  # noqa: F401
-from kartochka.config import settings
+from sqlalchemy import pool
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import create_async_engine
 
 config = context.config
 if config.config_file_name is not None:
