@@ -32,3 +32,4 @@ htmlcov/
 storage/
 fonts/*.ttf
 !fonts/.gitkeep
+__pycache__/
