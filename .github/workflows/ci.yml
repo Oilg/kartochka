@@ -2,44 +2,77 @@ name: CI
 
 on:
   push:
-    branches: [master, main, "feature/*"]
+    branches: [main, "feature/*"]
   pull_request:
-    branches: [master, main]
+    branches: [main]
 
 jobs:
-  quality:
-    name: Линтинг и типизация
+  ruff:
+    name: Ruff
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Установка Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Установка Poetry
         uses: snok/install-poetry@v1
         with:
           version: latest
           virtualenvs-create: true
           virtualenvs-in-project: true
+
       - name: Кэш виртуального окружения
         uses: actions/cache@v3
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
       - name: Установка зависимостей
         run: poetry install --no-interaction
+
       - name: Ruff — проверка стиля
         run: poetry run ruff check .
+
       - name: Ruff — проверка форматирования
         run: poetry run ruff format --check .
+
+  mypy:
+    name: Mypy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установка Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Установка Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Кэш виртуального окружения
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Установка зависимостей
+        run: poetry install --no-interaction
+
       - name: Mypy — проверка типов
         run: poetry run mypy kartochka/ --ignore-missing-imports
 
   test:
     name: Тесты
     runs-on: ubuntu-latest
-    needs: quality
     env:
       DATABASE_URL: sqlite+aiosqlite:///./test.db
       TEST_DATABASE_URL: sqlite+aiosqlite:///./test.db
@@ -49,23 +82,29 @@ jobs:
       FONTS_PATH: ./fonts
     steps:
       - uses: actions/checkout@v4
+
       - name: Установка Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Установка Poetry
         uses: snok/install-poetry@v1
         with:
           virtualenvs-in-project: true
+
       - name: Кэш виртуального окружения
         uses: actions/cache@v3
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
       - name: Установка зависимостей
         run: poetry install --no-interaction
+
       - name: Запуск тестов с покрытием
         run: poetry run pytest tests/ -v --tb=short
+
       - name: Публикация отчёта о покрытии
         uses: codecov/codecov-action@v3
         if: always()
