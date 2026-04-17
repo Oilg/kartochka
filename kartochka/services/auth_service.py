@@ -19,7 +19,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def create_access_token(user_id: int) -> str:
     expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     data = {"sub": str(user_id), "exp": expire}
-    return jwt.encode(data, settings.secret_key, algorithm="HS256")
+    return str(jwt.encode(data, settings.secret_key, algorithm="HS256"))
 
 
 def verify_token(token: str) -> str | None:

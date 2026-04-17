@@ -120,12 +120,12 @@ def apply_image_fit(
     src_w, src_h = img.size
 
     if fit == "fill":
-        return img.resize((target_w, target_h), Image.LANCZOS)
+        return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
     elif fit == "contain":
         ratio = min(target_w / src_w, target_h / src_h)
         new_w = int(src_w * ratio)
         new_h = int(src_h * ratio)
-        resized = img.resize((new_w, new_h), Image.LANCZOS)
+        resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
         result = Image.new("RGBA", (target_w, target_h), (0, 0, 0, 0))
         offset_x = (target_w - new_w) // 2
         offset_y = (target_h - new_h) // 2
@@ -135,7 +135,7 @@ def apply_image_fit(
         ratio = max(target_w / src_w, target_h / src_h)
         new_w = int(src_w * ratio)
         new_h = int(src_h * ratio)
-        resized = img.resize((new_w, new_h), Image.LANCZOS)
+        resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
         offset_x = (new_w - target_w) // 2
         offset_y = (new_h - target_h) // 2
         return resized.crop(
@@ -336,7 +336,7 @@ async def generate_image(
     if output_width or output_height:
         new_w = output_width or canvas_width
         new_h = output_height or canvas_height
-        canvas = canvas.resize((new_w, new_h), Image.LANCZOS)
+        canvas = canvas.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
     # Save in requested format
     output_path.parent.mkdir(parents=True, exist_ok=True)
