@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Шаблоны{% endblock %}
+{% block extra_css %}
+<style>
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+.template-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--white);
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.template-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); transform: translateY(-2px); }
+.template-preview {
+  height: 180px;
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.template-preview img { width: 100%; height: 100%; object-fit: cover; }
+.preview-placeholder {
+  color: var(--secondary);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.preview-placeholder span { font-size: 11px; font-family: monospace; }
+.template-info { padding: 14px 16px 10px; flex: 1; }
+.template-name { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.marketplace-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.marketplace-wb { background: #f5e6ff; color: #7b2d8b; }
+.marketplace-ozon { background: #e6f0ff; color: #0055cc; }
+.marketplace-universal { background: #e6fff5; color: #006644; }
+.template-actions {
+  padding: 10px 16px 14px;
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+}
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.filter-tab {
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--white);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  font-family: inherit;
+  color: var(--secondary);
+}
+.filter-tab:hover { border-color: var(--accent); color: var(--accent); }
+.filter-tab.active { background: var(--accent); border-color: var(--accent); color: var(--white); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">Мои шаблоны</h1>
+    <a href="/editor" class="btn btn-primary">+ Создать шаблон</a>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-marketplace="all">Все</button>
+    <button class="filter-tab" data-marketplace="wb">Wildberries</button>
+    <button class="filter-tab" data-marketplace="ozon">Ozon</button>
+    <button class="filter-tab" data-marketplace="universal">Универсальные</button>
+  </div>
+
+  <div id="templates-grid" class="templates-grid"></div>
+
+  <div id="empty-state" class="empty-state" style="display:none;">
+    <h3>Нет шаблонов</h3>
+    <p>Создайте первый шаблон для вашего магазина</p>
+    <a href="/editor" class="btn btn-primary">Создать шаблон</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/templates.js"></script>
+{% endblock %}

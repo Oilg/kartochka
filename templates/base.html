@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Карточка{% endblock %} — Карточка</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">🃏 Карточка</a>
+
+    <ul class="navbar-nav">
+      <li><a href="/templates" id="nav-templates">Шаблоны</a></li>
+      <li><a href="/generate" id="nav-generate">Генерации</a></li>
+      <li><a href="/api-docs" id="nav-api">API</a></li>
+    </ul>
+
+    <div class="navbar-user" id="user-menu-container">
+      <div id="auth-buttons" style="display:none;">
+        <a href="/login" class="btn btn-secondary btn-sm">Войти</a>
+        <a href="/register" class="btn btn-primary btn-sm">Регистрация</a>
+      </div>
+      <div class="user-menu" id="user-menu" style="display:none;">
+        <button class="user-menu-btn" id="user-btn" onclick="toggleDropdown()">
+          <span id="user-name">Пользователь</span>
+          <span>▾</span>
+        </button>
+        <div class="dropdown" id="user-dropdown">
+          <a href="/dashboard">Личный кабинет</a>
+          <button onclick="logout()">Выйти</button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  {% block content %}{% endblock %}
+
+  <script src="/static/js/api.js"></script>
+  <script>
+    // Set active nav link
+    const path = window.location.pathname;
+    if (path.startsWith('/templates') || path.startsWith('/editor')) {
+      document.getElementById('nav-templates')?.classList.add('active');
+    } else if (path.startsWith('/generate') || path.startsWith('/generations')) {
+      document.getElementById('nav-generate')?.classList.add('active');
+    } else if (path.startsWith('/api-docs')) {
+      document.getElementById('nav-api')?.classList.add('active');
+    }
+
+    // Auth state
+    function updateAuthUI() {
+      const token = API.getToken();
+      const authButtons = document.getElementById('auth-buttons');
+      const userMenu = document.getElementById('user-menu');
+
+      if (token) {
+        authButtons.style.display = 'none';
+        userMenu.style.display = 'block';
+        // Load user info
+        API.get('/api/auth/me').then(r => r.ok ? r.json() : null).then(user => {
+          if (user) {
+            document.getElementById('user-name').textContent = user.full_name || user.email.split('@')[0];
+          }
+        }).catch(() => {});
+      } else {
+        authButtons.style.display = 'flex';
+        userMenu.style.display = 'none';
+      }
+    }
+
+    function toggleDropdown() {
+      document.getElementById('user-dropdown').classList.toggle('open');
+    }
+
+    function logout() {
+      API.clearToken();
+      window.location = '/login';
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.user-menu')) {
+        document.getElementById('user-dropdown')?.classList.remove('open');
+      }
+    });
+
+    updateAuthUI();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

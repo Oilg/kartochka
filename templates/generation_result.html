@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Результат генерации{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 720px;">
+  <div class="page-header">
+    <h1 class="page-title">Результат генерации</h1>
+    <a href="/generate" class="btn btn-secondary">← Новая генерация</a>
+  </div>
+
+  <input type="hidden" id="generation-uid" value="{{ generation_uid or '' }}">
+
+  <div class="card" style="text-align: center;">
+    <!-- Spinner / status -->
+    <div id="status-section" style="padding: 40px 20px;">
+      <div class="spinner" id="status-spinner" style="width:40px; height:40px; margin: 0 auto 16px;"></div>
+      <p id="status-text" style="font-size: 16px; color: var(--secondary);">Генерация изображения...</p>
+    </div>
+
+    <!-- Result image -->
+    <div id="result-section" style="display:none; padding: 20px;">
+      <div style="margin-bottom: 16px;">
+        <img id="result-image" src="" alt="Результат"
+             style="max-width: 100%; max-height: 600px; border-radius: var(--radius); box-shadow: var(--shadow);">
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <a id="download-btn" href="#" class="btn btn-primary btn-lg" download>
+          ⬇ Скачать
+        </a>
+        <a href="/generate" class="btn btn-secondary btn-lg">
+          + Ещё одна
+        </a>
+      </div>
+    </div>
+
+    <!-- Error section -->
+    <div id="error-section" style="display:none; padding: 40px 20px;">
+      <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+      <h3 style="color: var(--danger); margin-bottom: 8px;">Ошибка генерации</h3>
+      <p id="error-message" style="color: var(--secondary); margin-bottom: 24px;"></p>
+      <a href="/generate" class="btn btn-primary">Попробовать снова</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/api.js"></script>
+<script src="/static/js/generations.js"></script>
+{% endblock %}

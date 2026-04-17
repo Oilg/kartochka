@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Редактор шаблона{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/editor.css">
+{% endblock %}
+
+{% block content %}
+<input type="hidden" id="template-uid" value="{{ template_uid or '' }}">
+
+<div class="editor-layout">
+  <!-- Left panel: layers -->
+  <div class="editor-left">
+    <div class="panel-header">
+      <h3>Слои</h3>
+    </div>
+
+    <div class="template-info-form">
+      <div class="form-group" style="margin-bottom:8px;">
+        <input class="form-control" id="tmpl-name" placeholder="Название шаблона" style="font-weight:600;">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <select class="form-control" id="tmpl-marketplace" style="flex:1;">
+          <option value="universal">Универсальный</option>
+          <option value="wb">Wildberries</option>
+          <option value="ozon">Ozon</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <input class="form-control" id="tmpl-width" type="number" placeholder="Ширина" style="flex:1;">
+        <input class="form-control" id="tmpl-height" type="number" placeholder="Высота" style="flex:1;">
+        <button class="btn btn-secondary btn-sm" id="apply-size" title="Применить размер">↺</button>
+      </div>
+    </div>
+
+    <div class="layers-list" id="layers-list">
+      <div style="color:var(--secondary); font-size:13px; text-align:center; padding:20px;">
+        Добавьте первый слой
+      </div>
+    </div>
+
+    <div class="layer-actions">
+      <div class="add-layer-btns">
+        <button class="btn btn-secondary btn-sm" id="add-rect">□ Фигура</button>
+        <button class="btn btn-secondary btn-sm" id="add-text">T Текст</button>
+        <button class="btn btn-secondary btn-sm" id="add-image">⬜ Картинка</button>
+      </div>
+    </div>
+
+    <div class="variables-section">
+      <div class="prop-group-title" style="margin-bottom:8px;">Переменные</div>
+      <div id="variables-list" style="font-size:12px; color:var(--secondary);">—</div>
+    </div>
+  </div>
+
+  <!-- Center panel: canvas -->
+  <div class="editor-center">
+    <div class="editor-toolbar">
+      <button class="btn btn-secondary btn-sm" id="preview-btn">👁 Превью</button>
+      <div class="canvas-zoom">
+        <span>Масштаб:</span>
+        <span id="zoom-level">100%</span>
+      </div>
+    </div>
+
+    <div class="canvas-container">
+      <div class="canvas-wrapper">
+        <canvas id="editor-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel: properties -->
+  <div class="editor-right">
+    <div class="panel-header">
+      <h3>Свойства</h3>
+    </div>
+    <div class="properties-content">
+      <div id="properties-panel" class="no-selection">
+        Выберите элемент на холсте
+      </div>
+    </div>
+    <div class="save-bar">
+      <span class="save-status" id="save-status"></span>
+      <button class="btn btn-primary" id="save-btn">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script src="/static/js/editor.js"></script>
+{% endblock %}
