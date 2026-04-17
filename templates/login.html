@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход — Карточка</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <h1>🃏 Карточка</h1>
+        <p>Генератор карточек для маркетплейсов</p>
+      </div>
+
+      <div id="error-alert" class="alert alert-danger" style="display:none;"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-control" id="email" name="email"
+                 placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Пароль</label>
+          <input type="password" class="form-control" id="password" name="password"
+                 placeholder="Ваш пароль" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%" id="submit-btn">
+          Войти
+        </button>
+      </form>
+
+      <p style="text-align:center; margin-top:16px; color: var(--secondary);">
+        Нет аккаунта? <a href="/register">Зарегистрируйтесь</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="/static/js/api.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (API.isLoggedIn()) window.location = '/dashboard';
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submit-btn');
+      const errorAlert = document.getElementById('error-alert');
+      btn.disabled = true;
+      btn.textContent = 'Вход...';
+      errorAlert.style.display = 'none';
+
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const resp = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+          API.setToken(data.access_token);
+          window.location = '/dashboard';
+        } else {
+          const msg = data?.message || data?.detail?.message || 'Неверный email или пароль';
+          errorAlert.textContent = msg;
+          errorAlert.style.display = 'block';
+        }
+      } catch (err) {
+        errorAlert.textContent = 'Ошибка соединения. Попробуйте снова.';
+        errorAlert.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+      }
+    });
+  </script>
+</body>
+</html>

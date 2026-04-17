@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}API Документация{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 860px;">
+  <div class="page-header">
+    <h1 class="page-title">API Документация</h1>
+  </div>
+
+  <div class="card" style="margin-bottom: 16px;">
+    <h2 style="font-size:16px; font-weight:600; margin-bottom:8px;">Аутентификация</h2>
+    <p style="color:var(--secondary); font-size:14px; margin-bottom:12px;">
+      API поддерживает два способа аутентификации:
+    </p>
+    <ul style="font-size:14px; color:var(--text); padding-left:20px; line-height:2;">
+      <li><strong>Bearer токен</strong> — передайте JWT в заголовке <code>Authorization: Bearer &lt;token&gt;</code></li>
+      <li><strong>API ключ</strong> (только Pro) — передайте ключ в заголовке <code>X-API-Key: &lt;key&gt;</code></li>
+    </ul>
+  </div>
+
+  <!-- Auth endpoints -->
+  <div class="card" style="margin-bottom: 16px;">
+    <h2 style="font-size:16px; font-weight:600; margin-bottom:16px;">🔑 Аутентификация</h2>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <code>/api/auth/register</code>
+        <span class="endpoint-desc">Регистрация нового пользователя</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="code-block">{"email": "user@example.com", "password": "min8chars", "full_name": "Имя"}</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <code>/api/auth/login</code>
+        <span class="endpoint-desc">Получить JWT токен</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="code-block">{"email": "user@example.com", "password": "password"}</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <code>/api/auth/me</code>
+        <span class="endpoint-desc">Информация о текущем пользователе</span>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <code>/api/auth/regenerate-api-key</code>
+        <span class="endpoint-desc">Сгенерировать новый API ключ</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates endpoints -->
+  <div class="card" style="margin-bottom: 16px;">
+    <h2 style="font-size:16px; font-weight:600; margin-bottom:16px;">🎨 Шаблоны</h2>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <code>/api/templates/</code>
+        <span class="endpoint-desc">Список шаблонов</span>
+      </div>
+      <div class="endpoint-body">
+        <p style="font-size:13px; color:var(--secondary);">Параметры: <code>marketplace</code>, <code>offset</code>, <code>limit</code></p>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <code>/api/templates/</code>
+        <span class="endpoint-desc">Создать шаблон</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="code-block">{"name": "Мой шаблон", "marketplace": "wb", "canvas_json": "{...}", "variables": "[...]", "canvas_width": 900, "canvas_height": 1200}</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <code>/api/templates/{uid}</code>
+        <span class="endpoint-desc">Получить шаблон по UID</span>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method put">PUT</span>
+        <code>/api/templates/{uid}</code>
+        <span class="endpoint-desc">Обновить шаблон</span>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method delete">DELETE</span>
+        <code>/api/templates/{uid}</code>
+        <span class="endpoint-desc">Удалить шаблон</span>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <code>/api/templates/{uid}/preview</code>
+        <span class="endpoint-desc">Сгенерировать превью шаблона</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generations endpoints -->
+  <div class="card" style="margin-bottom: 16px;">
+    <h2 style="font-size:16px; font-weight:600; margin-bottom:16px;">⚡ Генерации</h2>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method post">POST</span>
+        <code>/api/generations/</code>
+        <span class="endpoint-desc">Создать генерацию изображения</span>
+      </div>
+      <div class="endpoint-body">
+        <div class="code-block">{"template_uid": "uuid", "input_data": {"title": "Текст"}, "output_format": "png", "output_width": null, "output_height": null}</div>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <code>/api/generations/</code>
+        <span class="endpoint-desc">Список генераций</span>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <code>/api/generations/{uid}</code>
+        <span class="endpoint-desc">Статус генерации</span>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method get">GET</span>
+        <code>/api/generations/{uid}/download</code>
+        <span class="endpoint-desc">Скачать результат</span>
+      </div>
+    </div>
+
+    <div class="endpoint">
+      <div class="endpoint-header">
+        <span class="method delete">DELETE</span>
+        <code>/api/generations/{uid}</code>
+        <span class="endpoint-desc">Удалить генерацию</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Example -->
+  <div class="card" style="margin-bottom: 16px;">
+    <h2 style="font-size:16px; font-weight:600; margin-bottom:12px;">Пример использования</h2>
+    <div class="code-block" style="white-space:pre; overflow-x:auto;">curl -X POST https://api.kartochka.ru/api/generations/ \
+  -H "X-API-Key: ваш-api-ключ" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_uid": "uuid-шаблона",
+    "input_data": {
+      "title": "Кроссовки Nike",
+      "price": "4990"
+    },
+    "output_format": "png"
+  }'</div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:16px; font-weight:600; margin-bottom:8px;">Лимиты</h2>
+    <table class="table">
+      <thead><tr><th>Тариф</th><th>Шаблоны</th><th>Генераций/день</th><th>Водяной знак</th><th>API ключ</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-free">Free</span></td><td>3</td><td>10</td><td>Да</td><td>—</td></tr>
+        <tr><td><span class="badge badge-pro">Pro</span></td><td>Без лимита</td><td>Без лимита</td><td>Нет</td><td>✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.endpoint { margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.endpoint-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg); flex-wrap: wrap; }
+.endpoint-body { padding: 10px 14px; border-top: 1px solid var(--border); }
+.endpoint-desc { color: var(--secondary); font-size: 13px; }
+.method { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; font-family: monospace; }
+.method.get { background: #d1fae5; color: #065f46; }
+.method.post { background: #dbeafe; color: #1e40af; }
+.method.put { background: #fef3c7; color: #92400e; }
+.method.delete { background: #fee2e2; color: #991b1b; }
+.code-block { background: #1e1e1e; color: #d4d4d4; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 13px; line-height: 1.6; }
+</style>
+{% endblock %}

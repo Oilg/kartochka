@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}Личный кабинет{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/dashboard.css">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="welcome-banner">
+    <div>
+      <h1>Добро пожаловать, <span id="welcome-name">...</span>!</h1>
+      <p>Ваш план: <span id="plan-badge" class="badge">...</span></p>
+    </div>
+    <a href="/editor" class="btn btn-white">+ Новый шаблон</a>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="stat-card">
+      <div class="stat-card-label">Шаблоны</div>
+      <div class="stat-card-value" id="stat-templates">—</div>
+      <div class="stat-card-sub">всего создано</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Генерации сегодня</div>
+      <div class="stat-card-value" id="stat-generations">—</div>
+      <div class="stat-card-sub" id="stat-limit">из 10 доступно</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Всего генераций</div>
+      <div class="stat-card-value" id="stat-total">—</div>
+      <div class="stat-card-sub">за всё время</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">API ключ</div>
+      <div class="stat-card-value" style="font-size:16px; font-family:monospace;" id="stat-api">—</div>
+      <div class="stat-card-sub">для интеграции</div>
+    </div>
+  </div>
+
+  <div class="quickstart">
+    <h2>Быстрый старт</h2>
+    <div class="quickstart-steps">
+      <a href="/editor" class="quickstart-step" style="text-decoration:none; color:inherit;">
+        <div class="step-number">1</div>
+        <h4>Создайте шаблон</h4>
+        <p>Настройте дизайн карточки в редакторе</p>
+      </a>
+      <div class="quickstart-step">
+        <div class="step-number">2</div>
+        <h4>Добавьте переменные</h4>
+        <p>Используйте <code>{{название}}</code> для динамических данных</p>
+      </div>
+      <a href="/generate" class="quickstart-step" style="text-decoration:none; color:inherit;">
+        <div class="step-number">3</div>
+        <h4>Сгенерируйте</h4>
+        <p>Заполните данные и получите изображение</p>
+      </a>
+      <div class="quickstart-step">
+        <div class="step-number">4</div>
+        <h4>Скачайте</h4>
+        <p>PNG, JPG или WebP в нужном размере</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="recent-section">
+    <div class="recent-section-header">
+      <h2>Последние генерации</h2>
+      <a href="/generate" class="btn btn-primary btn-sm">+ Новая генерация</a>
+    </div>
+    <div id="recent-generations-container">
+      <table class="table" id="recent-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Шаблон</th>
+            <th>Формат</th>
+            <th>Статус</th>
+            <th>Дата</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="recent-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="empty-generations">
+        <h3>Нет генераций</h3>
+        <p>Создайте первую генерацию прямо сейчас</p>
+        <a href="/generate" class="btn btn-primary">Генерировать</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="api-key-section">
+    <h2>API ключ</h2>
+    <p>Используйте этот ключ для интеграции с вашим приложением. Передавайте в заголовке <code>X-API-Key</code>.</p>
+    <div class="api-key-display">
+      <input type="password" class="form-control api-key-input" id="api-key-field" readonly>
+      <button class="btn btn-secondary" onclick="toggleApiKey()">👁</button>
+      <button class="btn btn-secondary" onclick="copyApiKey()">📋</button>
+      <button class="btn btn-secondary" onclick="regenerateApiKey()">🔄</button>
+    </div>
+    <div id="copy-hint" style="font-size:12px; color:var(--success); margin-top:4px; display:none;">Скопировано!</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (!API.requireAuth()) {}
+
+  let userData = null;
+  let apiKeyVisible = false;
+
+  async function loadDashboard() {
+    try {
+      userData = await API.getJSON('/api/auth/me');
+      document.getElementById('welcome-name').textContent = userData.full_name || userData.email.split('@')[0];
+
+      const planBadge = document.getElementById('plan-badge');
+      planBadge.textContent = userData.plan === 'pro' ? 'Pro' : 'Free';
+      planBadge.className = `badge badge-${userData.plan}`;
+
+      document.getElementById('stat-generations').textContent = userData.free_generations_used_today;
+      const limitText = userData.plan === 'pro' ? 'без ограничений' : 'из 10 в день';
+      document.getElementById('stat-limit').textContent = limitText;
+
+      const apiKeyShort = userData.api_key.substring(0, 8) + '...';
+      document.getElementById('stat-api').textContent = apiKeyShort;
+      document.getElementById('api-key-field').value = userData.api_key;
+    } catch (e) {
+      console.error('Failed to load user', e);
+    }
+
+    // Load templates count
+    try {
+      const templates = await API.getJSON('/api/templates/?limit=100');
+      document.getElementById('stat-templates').textContent = templates.length;
+    } catch (e) {}
+
+    // Load recent generations
+    try {
+      const gens = await API.getJSON('/api/generations/');
+      document.getElementById('stat-total').textContent = gens.length;
+
+      if (gens.length > 0) {
+        document.getElementById('empty-generations').style.display = 'none';
+        document.getElementById('recent-table').style.display = 'table';
+        const tbody = document.getElementById('recent-tbody');
+        tbody.innerHTML = gens.slice(0, 10).map(g => `
+          <tr>
+            <td style="font-family:monospace; font-size:12px;">${g.uid.substring(0, 8)}...</td>
+            <td>${g.template_id}</td>
+            <td>${g.output_format.toUpperCase()}</td>
+            <td><span class="status-badge status-${g.status}">${statusLabel(g.status)}</span></td>
+            <td>${new Date(g.created_at).toLocaleDateString('ru')}</td>
+            <td>
+              ${g.status === 'completed' ? `<a href="/api/generations/${g.uid}/download" class="btn btn-secondary btn-sm">↓</a>` : ''}
+            </td>
+          </tr>
+        `).join('');
+      }
+    } catch (e) {}
+  }
+
+  function statusLabel(s) {
+    const m = { pending: 'В очереди', processing: 'Генерация', completed: 'Готово', failed: 'Ошибка' };
+    return m[s] || s;
+  }
+
+  function toggleApiKey() {
+    const field = document.getElementById('api-key-field');
+    apiKeyVisible = !apiKeyVisible;
+    field.type = apiKeyVisible ? 'text' : 'password';
+  }
+
+  function copyApiKey() {
+    if (!userData) return;
+    navigator.clipboard.writeText(userData.api_key).then(() => {
+      const hint = document.getElementById('copy-hint');
+      hint.style.display = 'block';
+      setTimeout(() => { hint.style.display = 'none'; }, 2000);
+    });
+  }
+
+  async function regenerateApiKey() {
+    if (!confirm('Сгенерировать новый API ключ? Текущий ключ перестанет работать.')) return;
+    try {
+      const data = await API.postJSON('/api/auth/regenerate-api-key', {});
+      userData.api_key = data.api_key;
+      document.getElementById('api-key-field').value = data.api_key;
+      alert('API ключ обновлён');
+    } catch (e) {
+      alert('Не удалось обновить ключ');
+    }
+  }
+
+  loadDashboard();
+</script>
+{% endblock %}

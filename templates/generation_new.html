@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Новая генерация{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 640px;">
+  <div class="page-header">
+    <h1 class="page-title">Новая генерация</h1>
+  </div>
+
+  <div class="card">
+    <form id="generation-form">
+      <input type="hidden" id="preselected-template" value="{{ template_uid or '' }}">
+
+      <div class="form-group">
+        <label class="form-label">Шаблон</label>
+        <select class="form-control" id="template-select" required>
+          <option value="">— Выберите шаблон —</option>
+        </select>
+      </div>
+
+      <div id="dynamic-fields"></div>
+
+      <div class="form-group">
+        <label class="form-label">Формат вывода</label>
+        <select class="form-control" id="output-format">
+          <option value="png">PNG (лучшее качество)</option>
+          <option value="jpg">JPG (меньше размер)</option>
+          <option value="webp">WebP (современный формат)</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:12px; justify-content:flex-end;">
+        <a href="/templates" class="btn btn-secondary">Отмена</a>
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          ⚡ Генерировать
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:16px; background: #F0FDF4; border-color: #BBF7D0;">
+    <h3 style="font-size:14px; font-weight:600; margin-bottom:8px; color:#166534;">💡 Подсказка</h3>
+    <p style="font-size:13px; color:#166534;">
+      Используйте переменные <code style="background:#D1FAE5; padding:1px 4px; border-radius:3px;">{{название}}</code>
+      в шаблонах для подстановки данных при генерации.
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/generations.js"></script>
+{% endblock %}
