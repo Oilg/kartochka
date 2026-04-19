@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,13 +20,18 @@ from kartochka.services.auth_service import (
     verify_password,
 )
 from kartochka.utils.dependencies import get_current_user
+from kartochka.utils.logging import logger
+from kartochka.utils.rate_limit import limiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserRegisterResponse)
+@limiter.limit("3/minute")
 async def register(
-    data: UserCreate, db: AsyncSession = Depends(get_db)
+    request: Request,
+    data: UserCreate,
+    db: AsyncSession = Depends(get_db),
 ) -> UserRegisterResponse:
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalar_one_or_none():
@@ -49,6 +54,7 @@ async def register(
     await db.commit()
     await db.refresh(user)
 
+    logger.info("user_registered email=%s", data.email)
     return UserRegisterResponse(
         user_id=user.id,
         email=user.email,
@@ -58,11 +64,17 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(data: UserLogin, db: AsyncSession = Depends(get_db)) -> TokenResponse:
+@limiter.limit("5/minute")
+async def login(
+    request: Request,
+    data: UserLogin,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(data.password, user.hashed_password):
+        logger.warning("login_failed email=%s ip=%s", data.email, request.client)
         raise HTTPException(
             401,
             detail={
@@ -73,6 +85,7 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)) -> TokenRes
         )
 
     token = create_access_token(user.id)
+    logger.info("login_success email=%s", data.email)
     return TokenResponse(access_token=token)
 
 
@@ -89,4 +102,5 @@ async def regenerate_api_key(
     user.api_key = str(uuid.uuid4())
     await db.commit()
     await db.refresh(user)
+    logger.info("api_key_regenerated user_id=%s", user.id)
     return ApiKeyResponse(api_key=user.api_key)

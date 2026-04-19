@@ -1,14 +1,16 @@
 import json
+import time
 from datetime import date
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kartochka.config import settings
 from kartochka.database import get_db
+from kartochka.metrics import generation_duration_seconds, generations_total
 from kartochka.models.generation import Generation
 from kartochka.models.template import Template
 from kartochka.models.user import User
@@ -16,8 +18,13 @@ from kartochka.schemas.generation import GenerationCreate, GenerationResponse
 from kartochka.services.image_service import generate_image
 from kartochka.utils.dependencies import get_current_user, get_current_user_flexible
 from kartochka.utils.helpers import generate_uid
+from kartochka.utils.logging import logger
+from kartochka.utils.rate_limit import limiter
 
 router = APIRouter(prefix="/api/generations", tags=["generations"])
+
+# Base storage path used to validate downloads against path traversal
+_STORAGE_ROOT = Path(settings.storage_path).resolve()
 
 
 async def check_generation_limits(user: User, db: AsyncSession) -> None:
@@ -41,7 +48,9 @@ async def check_generation_limits(user: User, db: AsyncSession) -> None:
 
 
 @router.post("/", response_model=GenerationResponse)
+@limiter.limit("20/minute")
 async def create_generation(
+    request: Request,
     data: GenerationCreate,
     user: User = Depends(get_current_user_flexible),
     db: AsyncSession = Depends(get_db),
@@ -79,6 +88,8 @@ async def create_generation(
     await db.commit()
     await db.refresh(generation)
 
+    t_start = time.monotonic()
+    status_label = "success"
     try:
         await generate_image(
             canvas_json=template.canvas_json,
@@ -90,15 +101,32 @@ async def create_generation(
             output_height=data.output_height,
             user_plan=user.plan,
             output_path=output_path,
+            is_preview=False,
         )
 
         generation.status = "completed"
         generation.file_path = str(output_path)
         generation.file_size = output_path.stat().st_size
         user.free_generations_used_today += 1
-    except Exception as e:
+        logger.info(
+            "generation_completed uid=%s user_id=%s format=%s",
+            gen_uid,
+            user.id,
+            data.output_format,
+        )
+    except Exception:
+        status_label = "error"
         generation.status = "failed"
-        generation.error_message = str(e)
+        generation.error_message = "Ошибка генерации изображения"
+        logger.exception("generation_failed uid=%s user_id=%s", gen_uid, user.id)
+    finally:
+        elapsed = time.monotonic() - t_start
+        generation_duration_seconds.observe(elapsed)
+        generations_total.labels(
+            status=status_label,
+            output_format=data.output_format.lower(),
+            plan=user.plan,
+        ).inc()
 
     await db.commit()
     await db.refresh(generation)
@@ -158,7 +186,20 @@ async def download_generation(
             detail={"error": True, "code": "NOT_FOUND", "message": "Файл не найден"},
         )
 
-    path = Path(gen.file_path)
+    # Path traversal protection: resolve and verify the file is within storage root
+    path = Path(gen.file_path).resolve()
+    if not str(path).startswith(str(_STORAGE_ROOT)):
+        logger.warning(
+            "path_traversal_attempt uid=%s user_id=%s file_path=%s",
+            uid,
+            user.id,
+            gen.file_path,
+        )
+        raise HTTPException(
+            403,
+            detail={"error": True, "code": "FORBIDDEN", "message": "Доступ запрещён"},
+        )
+
     if not path.exists():
         raise HTTPException(
             404,
