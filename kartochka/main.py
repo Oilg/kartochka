@@ -22,7 +22,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from kartochka.config import settings
 from kartochka.database import async_session_maker, get_db
-from kartochka.metrics import active_users_30d, registered_users_total
+from kartochka.metrics import (
+    active_users_30d,
+    http_requests_total,
+    registered_users_total,
+)
 from kartochka.models.template import Template
 from kartochka.models.user import User
 from kartochka.routers import auth, generations, pages, templates, uploads
@@ -643,6 +647,20 @@ app = FastAPI(title="Карточка API", version="0.1.0", lifespan=lifespan)
 # Rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+
+
+@app.middleware("http")
+async def prometheus_http_middleware(request: Request, call_next: Any) -> Any:
+    response = await call_next(request)
+    # Normalise path: strip query string, collapse dynamic segments to avoid high cardinality
+    path = request.url.path
+    http_requests_total.labels(
+        method=request.method,
+        endpoint=path,
+        status_code=str(response.status_code),
+    ).inc()
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,
