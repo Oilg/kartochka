@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import UTC
 from pathlib import Path
 from unittest.mock import patch
 
@@ -281,5 +282,58 @@ async def test_metrics_returns_prometheus_format(async_client: AsyncClient):
     assert resp.status_code == 200
     assert "text/plain" in resp.headers["content-type"]
     content = resp.text
-    # Our custom metric must be present
+    # Our custom metrics must be present
     assert "kartochka_generations_total" in content
+    assert "kartochka_active_users_30d" in content
+
+
+# ---------------------------------------------------------------------------
+# MAU — last_active_at updated on authenticated request
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_last_active_at_updated_on_request(
+    async_client: AsyncClient,
+    auth_headers: dict,
+    test_user: User,
+    test_db: AsyncSession,
+):
+    """Authenticated request must update last_active_at."""
+    from datetime import datetime
+
+    assert test_user.last_active_at is None
+
+    await async_client.get("/api/auth/me", headers=auth_headers)
+
+    await test_db.refresh(test_user)
+    assert test_user.last_active_at is not None
+    delta = datetime.now(UTC) - test_user.last_active_at.replace(tzinfo=UTC)
+    assert delta.total_seconds() < 10
+
+
+@pytest.mark.asyncio
+async def test_mau_counted_in_metrics(
+    async_client: AsyncClient,
+    auth_headers: dict,
+    test_db: AsyncSession,
+    test_user: User,
+):
+    """After an authenticated request the MAU gauge must be >= 1."""
+    # Make one request so last_active_at is set
+    await async_client.get("/api/auth/me", headers=auth_headers)
+
+    resp = await async_client.get("/metrics")
+    assert resp.status_code == 200
+    # Find the MAU gauge line
+    mau_line = next(
+        (
+            line
+            for line in resp.text.splitlines()
+            if line.startswith("kartochka_active_users_30d ")
+        ),
+        None,
+    )
+    assert mau_line is not None
+    value = float(mau_line.split()[-1])
+    assert value >= 1

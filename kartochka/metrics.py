@@ -22,3 +22,8 @@ registered_users_total = Gauge(
     "kartochka_registered_users_total",
     "Total number of registered users",
 )
+
+active_users_30d = Gauge(
+    "kartochka_active_users_30d",
+    "Monthly Active Users — users with at least one request in the last 30 days",
+)

@@ -4,6 +4,7 @@ import json
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, suppress
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +22,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from kartochka.config import settings
 from kartochka.database import async_session_maker, get_db
-from kartochka.metrics import registered_users_total
+from kartochka.metrics import active_users_30d, registered_users_total
 from kartochka.models.template import Template
 from kartochka.models.user import User
 from kartochka.routers import auth, generations, pages, templates, uploads
@@ -715,11 +716,19 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> JSONResponse:
 @app.get("/metrics")
 async def metrics(db: AsyncSession = Depends(get_db)) -> PlainTextResponse:
     """Prometheus metrics endpoint."""
-    # Update registered users gauge
+    from datetime import datetime, timedelta
+
+    from sqlalchemy import func
+
     try:
-        result = await db.execute(select(User))
-        count = len(list(result.scalars().all()))
-        registered_users_total.set(count)
+        total = await db.scalar(select(func.count()).select_from(User))
+        registered_users_total.set(total or 0)
+
+        cutoff = datetime.now(UTC) - timedelta(days=30)
+        mau = await db.scalar(
+            select(func.count()).select_from(User).where(User.last_active_at >= cutoff)
+        )
+        active_users_30d.set(mau or 0)
     except Exception:
         logger.exception("metrics_user_count_failed")
 

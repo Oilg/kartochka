@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -48,6 +50,9 @@ async def get_current_user(
             },
         )
 
+    user.last_active_at = datetime.now(UTC)
+    await db.commit()
+
     return user
 
 
@@ -75,6 +80,8 @@ async def get_current_user_flexible(
         )
         user = result.scalar_one_or_none()
         if user:
+            user.last_active_at = datetime.now(UTC)
+            await db.commit()
             return user
 
     # Try JWT
@@ -84,6 +91,8 @@ async def get_current_user_flexible(
             result = await db.execute(select(User).where(User.id == int(user_id)))
             user = result.scalar_one_or_none()
             if user and user.is_active:
+                user.last_active_at = datetime.now(UTC)
+                await db.commit()
                 return user
 
     raise HTTPException(
