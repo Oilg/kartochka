@@ -7,20 +7,27 @@ from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from kartochka.config import settings
-from kartochka.database import async_session_maker
+from kartochka.database import async_session_maker, get_db
+from kartochka.metrics import registered_users_total
 from kartochka.models.template import Template
 from kartochka.models.user import User
 from kartochka.routers import auth, generations, pages, templates, uploads
 from kartochka.services.auth_service import hash_password
+from kartochka.utils.logging import logger
+from kartochka.utils.rate_limit import limiter
 
 
 async def create_demo_user_if_not_exists(session: Any) -> None:
@@ -625,10 +632,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         with suppress(Exception):
             await create_demo_user_if_not_exists(session)
 
+    logger.info("kartochka_startup complete")
     yield
+    logger.info("kartochka_shutdown complete")
 
 
 app = FastAPI(title="Карточка API", version="0.1.0", lifespan=lifespan)
+
+# Rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 app.add_middleware(
     CORSMiddleware,
@@ -686,6 +699,32 @@ async def validation_exception_handler(
             "details": _make_serializable(exc.errors()),
         },
     )
+
+
+@app.get("/health")
+async def health_check(db: AsyncSession = Depends(get_db)) -> JSONResponse:
+    """Liveness + readiness probe: checks DB connectivity."""
+    try:
+        await db.execute(text("SELECT 1"))
+        return JSONResponse({"status": "ok", "db": "ok"})
+    except Exception:
+        logger.exception("health_check_failed")
+        return JSONResponse({"status": "error", "db": "unavailable"}, status_code=503)
+
+
+@app.get("/metrics")
+async def metrics(db: AsyncSession = Depends(get_db)) -> PlainTextResponse:
+    """Prometheus metrics endpoint."""
+    # Update registered users gauge
+    try:
+        result = await db.execute(select(User))
+        count = len(list(result.scalars().all()))
+        registered_users_total.set(count)
+    except Exception:
+        logger.exception("metrics_user_count_failed")
+
+    data = generate_latest()
+    return PlainTextResponse(data.decode("utf-8"), media_type=CONTENT_TYPE_LATEST)
 
 
 # Mount static files and storage

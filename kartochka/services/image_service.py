@@ -2,15 +2,47 @@ from __future__ import annotations
 
 import base64
 import io
+import ipaddress
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from PIL import Image, ImageDraw, ImageFont
 
 from kartochka.config import settings
 from kartochka.utils.helpers import substitute_variables
+
+
+def is_safe_url(url: str) -> bool:
+    """Block requests to private/internal networks (SSRF protection)."""
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        blocked = {"localhost", "metadata.google.internal"}
+        if hostname.lower() in blocked:
+            return False
+        if hostname.endswith(".local") or hostname.endswith(".internal"):
+            return False
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+                or ip.is_unspecified
+            ):
+                return False
+        except ValueError:
+            pass  # hostname is a domain — allowed
+        return True
+    except Exception:
+        return False
+
 
 # Font cache
 _font_cache: dict[str, ImageFont.FreeTypeFont] = {}
@@ -151,6 +183,8 @@ async def fetch_image(src: str) -> Image.Image | None:
             img_bytes = base64.b64decode(data)
             return Image.open(io.BytesIO(img_bytes)).convert("RGBA")
         elif src.startswith("http://") or src.startswith("https://"):
+            if not is_safe_url(src):
+                return None
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(src)
                 response.raise_for_status()
@@ -186,6 +220,7 @@ async def generate_image(
     output_height: int | None,
     user_plan: str,
     output_path: Path,
+    is_preview: bool = False,
 ) -> Path:
     try:
         data: dict[str, Any] = json.loads(canvas_json)
@@ -318,8 +353,8 @@ async def generate_image(
 
         canvas = Image.alpha_composite(canvas, layer_img)
 
-    # Watermark for free plan
-    if user_plan == "free":
+    # Watermark for free plan — only on previews, not final exports
+    if user_plan == "free" and is_preview:
         wm_draw = ImageDraw.Draw(canvas)
         wm_font = load_font("Roboto", 16)
         wm_text = "kartochka.ru"

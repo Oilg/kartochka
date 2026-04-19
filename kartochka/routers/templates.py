@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kartochka.config import settings
@@ -22,6 +22,8 @@ from kartochka.services.template_service import (
 )
 from kartochka.utils.dependencies import get_current_user
 from kartochka.utils.helpers import generate_uid
+from kartochka.utils.logging import logger
+from kartochka.utils.rate_limit import limiter
 
 router = APIRouter(prefix="/api/templates", tags=["templates"])
 
@@ -45,6 +47,7 @@ async def create(
     db: AsyncSession = Depends(get_db),
 ) -> TemplateResponse:
     template = await create_template(db, user, data)
+    logger.info("template_created user_id=%s uid=%s", user.id, template.uid)
     return TemplateResponse.model_validate(template)
 
 
@@ -82,7 +85,9 @@ async def delete(
 
 
 @router.post("/{uid}/preview")
+@limiter.limit("10/minute")
 async def preview_template(
+    request: Request,
     uid: str,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -102,17 +107,30 @@ async def preview_template(
         Path(settings.storage_path) / "generated" / f"preview_{preview_uid}.png"
     )
 
-    await generate_image(
-        canvas_json=template.canvas_json,
-        input_data=input_data,
-        output_format="png",
-        canvas_width=template.canvas_width,
-        canvas_height=template.canvas_height,
-        output_width=None,
-        output_height=None,
-        user_plan=user.plan,
-        output_path=output_path,
-    )
+    try:
+        await generate_image(
+            canvas_json=template.canvas_json,
+            input_data=input_data,
+            output_format="png",
+            canvas_width=template.canvas_width,
+            canvas_height=template.canvas_height,
+            output_width=None,
+            output_height=None,
+            user_plan=user.plan,
+            output_path=output_path,
+            is_preview=True,
+        )
+    except Exception as exc:
+        logger.exception("preview_failed template_uid=%s user_id=%s", uid, user.id)
+        raise HTTPException(
+            500,
+            detail={
+                "error": True,
+                "code": "PREVIEW_FAILED",
+                "message": "Ошибка генерации превью",
+            },
+        ) from exc
 
     preview_url = f"{settings.base_url}/storage/generated/preview_{preview_uid}.png"
+    logger.info("preview_generated template_uid=%s user_id=%s", uid, user.id)
     return {"preview_url": preview_url}

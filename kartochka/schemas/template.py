@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TemplateCreate(BaseModel):
@@ -9,8 +9,8 @@ class TemplateCreate(BaseModel):
     marketplace: str = "universal"
     canvas_json: str = "{}"
     variables: str = "[]"
-    canvas_width: int = 900
-    canvas_height: int = 1200
+    canvas_width: int = Field(default=900, ge=100, le=4000)
+    canvas_height: int = Field(default=1200, ge=100, le=4000)
 
 
 class TemplateUpdate(BaseModel):
@@ -19,8 +19,8 @@ class TemplateUpdate(BaseModel):
     marketplace: str | None = None
     canvas_json: str | None = None
     variables: str | None = None
-    canvas_width: int | None = None
-    canvas_height: int | None = None
+    canvas_width: int | None = Field(default=None, ge=100, le=4000)
+    canvas_height: int | None = Field(default=None, ge=100, le=4000)
     preview_url: str | None = None
 
 
