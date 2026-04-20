@@ -825,7 +825,7 @@ async def create_default_templates(session: Any, user: User) -> None:
                             "font_size": 28,
                             "font_bold": False,
                             "font_italic": False,
-                            "color": "rgba(255,255,255,0.75)",
+                            "color": "#CCDDFF",
                             "align": "left",
                             "max_lines": 1,
                             "line_height": 1.0,
