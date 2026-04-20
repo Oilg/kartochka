@@ -31,7 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     grid.innerHTML = filtered.map(t => `
       <div class="template-card card" data-uid="${t.uid}">
-        <button class="btn-delete-overlay" onclick="deleteTemplate('${t.uid}')" title="Удалить шаблон">✕</button>
+        <button class="btn-delete-overlay" onclick="deleteTemplate('${t.uid}')" title="Удалить шаблон">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </button>
         <div class="template-preview">
           ${t.preview_url
             ? `<img src="${t.preview_url}" alt="${t.name}" loading="lazy">`
@@ -48,8 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="marketplace-badge marketplace-${t.marketplace}">${marketplaceLabel(t.marketplace)}</span>
         </div>
         <div class="template-actions">
-          <a href="/editor/${t.uid}" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;">Редактировать</a>
-          <a href="/generate/${t.uid}" class="btn btn-secondary btn-sm" style="flex:1;justify-content:center;">Генерировать</a>
+          <a href="/editor/${t.uid}" class="btn btn-primary btn-sm">Редактировать</a>
+          <a href="/generate/${t.uid}" class="btn btn-secondary btn-sm">Генерировать</a>
         </div>
       </div>
     `).join('');
