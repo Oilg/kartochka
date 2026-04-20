@@ -51,7 +51,8 @@ async def create_demo_user_if_not_exists(session: Any) -> None:
         session.add(user)
         await session.commit()
         await session.refresh(user)
-        await create_default_templates(session, user)
+    # Always ensure default templates exist (idempotent — skips if already seeded)
+    await create_default_templates(session, user)
 
 
 async def _make_preview(session: Any, template: Template) -> None:
@@ -1168,7 +1169,7 @@ app = FastAPI(title="Карточка API", version="0.1.0", lifespan=lifespan)
 
 # Rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.middleware("http")
