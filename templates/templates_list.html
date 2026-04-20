@@ -52,9 +52,15 @@
 .marketplace-universal { background: #e6fff5; color: #006644; }
 .template-actions {
   padding: 10px 16px 14px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
   border-top: 1px solid var(--border);
+}
+.template-actions .btn {
+  justify-content: center;
+  text-align: center;
+  width: 100%;
 }
 /* Delete button — icon overlay in top-right corner */
 .btn-delete-overlay {
