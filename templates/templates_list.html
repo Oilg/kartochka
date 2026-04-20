@@ -16,10 +16,11 @@
   background: var(--white);
   box-shadow: var(--shadow);
   transition: box-shadow 0.2s, transform 0.2s;
+  position: relative;
 }
 .template-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); transform: translateY(-2px); }
 .template-preview {
-  height: 180px;
+  height: 200px;
   background: var(--bg);
   overflow: hidden;
   display: flex;
@@ -35,6 +36,7 @@
   align-items: center;
   gap: 8px;
 }
+.preview-placeholder svg { opacity: 0.3; }
 .preview-placeholder span { font-size: 11px; font-family: monospace; }
 .template-info { padding: 14px 16px 10px; flex: 1; }
 .template-name { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
@@ -53,6 +55,36 @@
   display: flex;
   gap: 8px;
   border-top: 1px solid var(--border);
+}
+/* Delete button — icon overlay in top-right corner */
+.btn-delete-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--secondary);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.template-card:hover .btn-delete-overlay {
+  opacity: 1;
+}
+.btn-delete-overlay:hover {
+  background: var(--danger);
+  color: var(--white);
+  border-color: var(--danger);
 }
 .filter-tabs {
   display: flex;
