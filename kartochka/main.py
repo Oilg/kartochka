@@ -51,7 +51,8 @@ async def create_demo_user_if_not_exists(session: Any) -> None:
         session.add(user)
         await session.commit()
         await session.refresh(user)
-        await create_default_templates(session, user)
+    # Always ensure default templates exist (idempotent — skips if already seeded)
+    await create_default_templates(session, user)
 
 
 async def _make_preview(session: Any, template: Template) -> None:

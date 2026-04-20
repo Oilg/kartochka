@@ -19,6 +19,4 @@ def check_magic_bytes(data: bytes, content_type: str) -> bool:
         return True
     if data[:3] == b"\xff\xd8\xff":
         return True
-    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return True
-    return False
+    return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
