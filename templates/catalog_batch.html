@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Пакет{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:1100px; margin:40px auto; padding:0 24px;">
+  <div style="display:flex; align-items:center; gap:16px; margin-bottom:32px;">
+    <a href="/catalog/batches" style="color:var(--secondary);">← Назад</a>
+    <h1 id="batch-title" style="margin:0;">Загрузка...</h1>
+    <span id="batch-status-badge" class="status-badge"></span>
+  </div>
+
+  <!-- Progress section -->
+  <div id="progress-section" style="background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <span style="font-weight:500;">Прогресс генерации</span>
+      <span id="progress-text" style="color:var(--secondary); font-size:14px;"></span>
+    </div>
+    <div style="background:var(--border); border-radius:6px; height:10px; margin-bottom:16px;">
+      <div id="progress-bar" style="background:var(--accent); height:10px; border-radius:6px; transition:width 0.3s; width:0%;"></div>
+    </div>
+    <div style="display:flex; gap:24px; font-size:13px;">
+      <span>Всего: <strong id="stat-total">—</strong></span>
+      <span style="color:var(--success);">Готово: <strong id="stat-done">—</strong></span>
+      <span style="color:var(--danger);">Ошибок: <strong id="stat-failed">—</strong></span>
+    </div>
+  </div>
+
+  <!-- Action buttons -->
+  <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+    <a id="download-btn" href="#" class="btn btn-primary" style="display:none;">↓ Скачать ZIP</a>
+    <button id="publish-btn" class="btn btn-secondary" style="display:none;" onclick="openPublishModal()">📤 Опубликовать</button>
+    <button id="retry-btn" class="btn btn-secondary" style="display:none;" onclick="retryFailed()">🔄 Повторить ошибки</button>
+    <a href="/catalog/upload" class="btn btn-secondary">+ Новый пакет</a>
+  </div>
+
+  <!-- Publish status -->
+  <div id="publish-progress" style="display:none; background:var(--white); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:24px;">
+    <strong>Публикация:</strong> <span id="publish-status-text">—</span>
+    <span id="publish-stats" style="color:var(--secondary); font-size:13px; margin-left:12px;"></span>
+  </div>
+
+  <!-- Item tabs -->
+  <div style="display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:16px;">
+    <button class="tab-btn active" id="item-tab-all" onclick="filterItems(null)">Все</button>
+    <button class="tab-btn" id="item-tab-done" onclick="filterItems('completed')">Готовые</button>
+    <button class="tab-btn" id="item-tab-failed" onclick="filterItems('failed')">С ошибками</button>
+    <button class="tab-btn" id="item-tab-pending" onclick="filterItems('pending')">В очереди</button>
+  </div>
+
+  <!-- Gallery -->
+  <div id="gallery" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:32px;"></div>
+  <div id="gallery-empty" style="display:none; text-align:center; padding:40px; color:var(--secondary);">Нет элементов</div>
+  <div id="gallery-loading" style="text-align:center; padding:40px; color:var(--secondary);">Загрузка...</div>
+  <div id="gallery-pagination" style="display:flex; gap:8px; justify-content:center; margin-top:16px;"></div>
+</div>
+
+<!-- Item detail modal -->
+<div id="item-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:var(--white); border-radius:12px; padding:24px; max-width:600px; width:100%; margin:0 16px; max-height:90vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 id="modal-title">Карточка</h3>
+      <button onclick="closeItemModal()" style="background:none; border:none; cursor:pointer; font-size:20px;">✕</button>
+    </div>
+    <img id="modal-img" src="" alt="" style="width:100%; border-radius:8px; margin-bottom:16px;" onerror="this.style.display='none'">
+    <div id="modal-info"></div>
+  </div>
+</div>
+
+<!-- Publish modal -->
+<div id="publish-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:var(--white); border-radius:12px; padding:32px; max-width:400px; width:100%; margin:0 16px;">
+    <h3 style="margin-bottom:16px;">Публикация в маркетплейс</h3>
+    <div class="form-group">
+      <label class="form-label">Маркетплейс</label>
+      <select id="publish-marketplace" class="form-control">
+        <option value="wildberries">Wildberries</option>
+        <option value="ozon">Ozon</option>
+      </select>
+    </div>
+    <div style="display:flex; gap:12px; margin-top:24px; justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closePublishModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="publishBatch()">Опубликовать</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/catalog_batch.js"></script>
+<script>
+  API.requireAuth();
+  const BATCH_UID = '{{ batch_uid }}';
+  initBatchPage(BATCH_UID);
+</script>
+{% endblock %}

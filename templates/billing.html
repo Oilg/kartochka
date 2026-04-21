@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Подписка{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:700px; margin:40px auto; padding:0 24px;">
+  <h1 style="margin-bottom:32px;">Управление подпиской</h1>
+
+  <div class="card" style="background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:24px;">
+    <h2 style="margin-bottom:16px;">Текущий тариф</h2>
+    <div id="plan-info">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+        <span id="plan-badge-large" class="badge" style="font-size:16px; padding:6px 16px;">...</span>
+        <span id="plan-status" style="color:var(--secondary);"></span>
+      </div>
+      <div id="sub-details" style="display:none;">
+        <p>Действует до: <strong id="expires-at">—</strong></p>
+      </div>
+    </div>
+    <div style="display:flex; gap:12px; margin-top:16px;">
+      <a href="/pricing" class="btn btn-primary" id="upgrade-btn" style="display:none;">Улучшить до Pro</a>
+      <button class="btn btn-secondary" id="cancel-btn" style="display:none;" onclick="cancelSubscription()">Отменить подписку</button>
+    </div>
+  </div>
+
+  <div class="card" style="background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px;">
+    <h2 style="margin-bottom:16px;">История платежей</h2>
+    <div id="payment-empty" style="color:var(--secondary); text-align:center; padding:24px;">
+      История платежей пока пуста
+    </div>
+  </div>
+</div>
+
+<!-- Cancel modal -->
+<div id="cancel-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:var(--white); border-radius:12px; padding:32px; max-width:400px; width:100%; margin:0 16px;">
+    <h3 style="margin-bottom:12px;">Отменить подписку?</h3>
+    <p style="color:var(--secondary); margin-bottom:24px;">После отмены вы сможете пользоваться Pro до конца оплаченного периода.</p>
+    <div style="display:flex; gap:12px; justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="closeCancelModal()">Назад</button>
+      <button class="btn btn-primary" style="background:var(--danger); border-color:var(--danger);" onclick="confirmCancel()">Подтвердить отмену</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  API.requireAuth();
+
+  async function loadBilling() {
+    try {
+      const user = await API.getJSON('/api/auth/me');
+      const badge = document.getElementById('plan-badge-large');
+      badge.textContent = user.plan === 'pro' ? 'Pro' : 'Free';
+      badge.className = `badge badge-${user.plan}`;
+
+      if (user.plan === 'free') {
+        document.getElementById('plan-status').textContent = 'Бесплатный тариф';
+        document.getElementById('upgrade-btn').style.display = 'block';
+      } else {
+        try {
+          const sub = await API.getJSON('/api/billing/subscription');
+          if (sub) {
+            document.getElementById('plan-status').textContent = 'Активная подписка';
+            document.getElementById('sub-details').style.display = 'block';
+            const exp = new Date(sub.expires_at).toLocaleDateString('ru');
+            document.getElementById('expires-at').textContent = exp;
+            if (sub.status === 'active') {
+              document.getElementById('cancel-btn').style.display = 'block';
+            }
+          }
+        } catch(e) {}
+      }
+
+      // Check for success param
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('success') === '1') {
+        showNotice('Подписка успешно активирована!', 'success');
+      }
+    } catch(e) {}
+  }
+
+  function showNotice(msg, type) {
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;top:80px;right:24px;background:${type==='success'?'var(--success)':'var(--danger)'};color:white;padding:12px 20px;border-radius:8px;z-index:9999;`;
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  function cancelSubscription() {
+    document.getElementById('cancel-modal').style.display = 'flex';
+  }
+
+  function closeCancelModal() {
+    document.getElementById('cancel-modal').style.display = 'none';
+  }
+
+  async function confirmCancel() {
+    try {
+      await API.postJSON('/api/billing/cancel', {});
+      closeCancelModal();
+      showNotice('Подписка отменена', 'success');
+      setTimeout(() => location.reload(), 1500);
+    } catch(e) {
+      showNotice('Не удалось отменить подписку', 'error');
+    }
+  }
+
+  loadBilling();
+</script>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Начало работы{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:700px; margin:60px auto; padding:0 24px;">
+  <h1 style="text-align:center; margin-bottom:8px;">Добро пожаловать! 🃏</h1>
+  <p style="text-align:center; color:var(--secondary); margin-bottom:40px;">Пройдите быстрый онбординг и начните генерировать карточки</p>
+
+  <!-- Steps indicator -->
+  <div style="display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:40px;">
+    <div class="step-dot active" id="dot-1">1</div>
+    <div class="step-line" id="line-1"></div>
+    <div class="step-dot" id="dot-2">2</div>
+    <div class="step-line" id="line-2"></div>
+    <div class="step-dot" id="dot-3">3</div>
+    <div class="step-line" id="line-3"></div>
+    <div class="step-dot" id="dot-4">4</div>
+  </div>
+
+  <!-- Steps -->
+  <div id="step-1">
+    <div style="text-align:center;">
+      <div style="font-size:64px; margin-bottom:16px;">🎨</div>
+      <h2 style="margin-bottom:12px;">Создайте первый шаблон</h2>
+      <p style="color:var(--secondary); margin-bottom:24px;">Настройте дизайн карточки товара в визуальном редакторе</p>
+      <a href="/editor" class="btn btn-primary">Открыть редактор</a>
+      <br><br>
+      <button class="btn btn-secondary" onclick="nextStep(2)">Пропустить →</button>
+    </div>
+  </div>
+
+  <div id="step-2" style="display:none;">
+    <div style="text-align:center;">
+      <div style="font-size:64px; margin-bottom:16px;">🔗</div>
+      <h2 style="margin-bottom:12px;">Подключите маркетплейс</h2>
+      <p style="color:var(--secondary); margin-bottom:24px;">Добавьте API-ключи Wildberries или Ozon для автоматического импорта</p>
+      <a href="/marketplace/connect" class="btn btn-primary">Подключить</a>
+      <br><br>
+      <button class="btn btn-secondary" onclick="nextStep(3)">Пропустить →</button>
+    </div>
+  </div>
+
+  <div id="step-3" style="display:none;">
+    <div style="text-align:center;">
+      <div style="font-size:64px; margin-bottom:16px;">📦</div>
+      <h2 style="margin-bottom:12px;">Запустите пакетную генерацию</h2>
+      <p style="color:var(--secondary); margin-bottom:24px;">Загрузите CSV-файл с товарами и сгенерируйте все карточки за один раз</p>
+      <a href="/catalog/upload" class="btn btn-primary">Загрузить каталог</a>
+      <br><br>
+      <button class="btn btn-secondary" onclick="nextStep(4)">Пропустить →</button>
+    </div>
+  </div>
+
+  <div id="step-4" style="display:none;">
+    <div style="text-align:center;">
+      <div style="font-size:64px; margin-bottom:16px;">🚀</div>
+      <h2 style="margin-bottom:12px;">Всё готово!</h2>
+      <p style="color:var(--secondary); margin-bottom:24px;">Вы знаете основы. Перейдите в личный кабинет и начните работу</p>
+      <a href="/dashboard" class="btn btn-primary">Перейти в кабинет</a>
+    </div>
+  </div>
+</div>
+
+<style>
+.step-dot {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--border); color: var(--secondary);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 14px; transition: all 0.3s;
+}
+.step-dot.active { background: var(--accent); color: white; }
+.step-dot.done { background: var(--success); color: white; }
+.step-line {
+  flex: 1; max-width: 80px; height: 2px;
+  background: var(--border); transition: background 0.3s;
+}
+.step-line.done { background: var(--success); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let currentStep = 1;
+
+  function nextStep(n) {
+    document.getElementById(`step-${currentStep}`).style.display = 'none';
+    document.getElementById(`dot-${currentStep}`).classList.remove('active');
+    document.getElementById(`dot-${currentStep}`).classList.add('done');
+    if (currentStep < 4) {
+      document.getElementById(`line-${currentStep}`).classList.add('done');
+    }
+    currentStep = n;
+    document.getElementById(`step-${n}`).style.display = 'block';
+    document.getElementById(`dot-${n}`).classList.add('active');
+  }
+</script>
+{% endblock %}

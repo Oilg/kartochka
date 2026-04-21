@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Подключение маркетплейсов{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:900px; margin:40px auto; padding:0 24px;">
+  <h1 style="margin-bottom:8px;">Подключение маркетплейсов</h1>
+  <p style="color:var(--secondary); margin-bottom:32px;">Подключите API-ключи для автоматического импорта и публикации карточек</p>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;" id="marketplace-grid">
+    <!-- Wildberries -->
+    <div class="card" style="background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:40px; height:40px; background:#CB11AB; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-weight:700;">WB</div>
+          <div>
+            <div style="font-weight:600; font-size:16px;">Wildberries</div>
+            <div id="wb-status" class="status-badge" style="font-size:11px;">не подключён</div>
+          </div>
+        </div>
+        <button onclick="openHelp('wb')" style="background:none; border:none; cursor:pointer; font-size:20px;" title="Помощь">❓</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">API-ключ</label>
+        <input type="password" id="wb-api-key" class="form-control" placeholder="Вставьте API-ключ WB">
+      </div>
+
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">Режим публикации</label>
+        <div style="display:flex; gap:16px; margin-top:6px;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" name="wb-publish-mode" value="manual" checked> Вручную
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" name="wb-publish-mode" value="auto"> Автоматически
+          </label>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="saveCredential('wildberries')">Подключить</button>
+        <button class="btn btn-secondary" onclick="verifyCredential('wildberries')" id="wb-verify-btn" style="display:none;">Проверить</button>
+        <button class="btn btn-secondary" style="color:var(--danger);" onclick="deleteCredential('wildberries')" id="wb-delete-btn" style="display:none;">Удалить</button>
+      </div>
+      <div id="wb-message" style="margin-top:8px; font-size:12px;"></div>
+    </div>
+
+    <!-- Ozon -->
+    <div class="card" style="background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:40px; height:40px; background:#005BFF; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-weight:700;">OZ</div>
+          <div>
+            <div style="font-weight:600; font-size:16px;">Ozon</div>
+            <div id="ozon-status" class="status-badge" style="font-size:11px;">не подключён</div>
+          </div>
+        </div>
+        <button onclick="openHelp('ozon')" style="background:none; border:none; cursor:pointer; font-size:20px;" title="Помощь">❓</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Client ID</label>
+        <input type="text" id="ozon-client-id" class="form-control" placeholder="Client ID">
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">API-ключ</label>
+        <input type="password" id="ozon-api-key" class="form-control" placeholder="API-ключ Ozon">
+      </div>
+
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">Режим публикации</label>
+        <div style="display:flex; gap:16px; margin-top:6px;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" name="ozon-publish-mode" value="manual" checked> Вручную
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="radio" name="ozon-publish-mode" value="auto"> Автоматически
+          </label>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="btn btn-primary" style="flex:1;" onclick="saveCredential('ozon')">Подключить</button>
+        <button class="btn btn-secondary" onclick="verifyCredential('ozon')" id="ozon-verify-btn" style="display:none;">Проверить</button>
+        <button class="btn btn-secondary" style="color:var(--danger);" onclick="deleteCredential('ozon')" id="ozon-delete-btn" style="display:none;">Удалить</button>
+      </div>
+      <div id="ozon-message" style="margin-top:8px; font-size:12px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Help modal -->
+<div id="help-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+  <div style="background:var(--white); border-radius:12px; padding:32px; max-width:500px; width:100%; margin:0 16px; max-height:80vh; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 id="help-title">Как получить API-ключ</h3>
+      <button onclick="closeHelp()" style="background:none; border:none; cursor:pointer; font-size:20px;">✕</button>
+    </div>
+    <div id="help-content"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/marketplace.js"></script>
+<script>
+  API.requireAuth();
+  loadCredentials();
+</script>
+{% endblock %}

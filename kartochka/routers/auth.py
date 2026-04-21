@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from kartochka.database import get_db
 from kartochka.models.user import User
+from kartochka.schemas.billing import NotificationsUpdate
 from kartochka.schemas.user import (
     ApiKeyResponse,
     TokenResponse,
@@ -104,3 +105,23 @@ async def regenerate_api_key(
     await db.refresh(user)
     logger.info("api_key_regenerated user_id=%s", user.id)
     return ApiKeyResponse(api_key=user.api_key)
+
+
+@router.patch("/notifications")
+async def update_notifications(
+    data: NotificationsUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, object]:
+    user.telegram_chat_id = data.telegram_chat_id
+    user.telegram_notifications = data.telegram_notifications
+    await db.commit()
+    logger.info(
+        "notifications_updated user_id=%s enabled=%s",
+        user.id,
+        data.telegram_notifications,
+    )
+    return {
+        "telegram_chat_id": user.telegram_chat_id,
+        "telegram_notifications": user.telegram_notifications,
+    }

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Тарифы{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:900px; margin:40px auto; padding:0 24px;">
+  <h1 style="text-align:center; margin-bottom:8px;">Тарифные планы</h1>
+  <p style="text-align:center; color:var(--secondary); margin-bottom:40px;">Выберите подходящий тариф для вашего бизнеса</p>
+
+  <div id="plans-loading" style="text-align:center; padding:40px;">Загрузка...</div>
+
+  <div id="plans-grid" style="display:none; display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+    <!-- Free plan -->
+    <div class="plan-card" id="plan-free" style="background:var(--white); border:2px solid var(--border); border-radius:12px; padding:32px;">
+      <div style="font-size:24px; font-weight:700; margin-bottom:8px;">Free</div>
+      <div style="font-size:36px; font-weight:700; color:var(--accent); margin-bottom:4px;">0 ₽</div>
+      <div style="color:var(--secondary); margin-bottom:24px;">навсегда</div>
+      <div id="free-features"></div>
+      <div style="margin-top:24px;" id="free-btn-zone">
+        <span class="btn btn-secondary" style="width:100%; text-align:center; display:block;">Текущий тариф</span>
+      </div>
+    </div>
+
+    <!-- Pro plan -->
+    <div class="plan-card" id="plan-pro" style="background:var(--white); border:2px solid var(--accent); border-radius:12px; padding:32px; position:relative;">
+      <div style="position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:var(--accent); color:white; padding:4px 16px; border-radius:20px; font-size:12px; font-weight:600;">ПОПУЛЯРНЫЙ</div>
+      <div style="font-size:24px; font-weight:700; margin-bottom:8px;">Pro</div>
+      <div style="font-size:36px; font-weight:700; color:var(--accent); margin-bottom:4px;" id="pro-price">1 490 ₽</div>
+      <div style="color:var(--secondary); margin-bottom:24px;">в месяц</div>
+      <div id="pro-features"></div>
+      <div style="margin-top:24px;" id="pro-btn-zone">
+        <button class="btn btn-primary" style="width:100%;" onclick="subscribePro()">Подключить Pro</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let currentPlan = 'free';
+
+  async function loadPlans() {
+    try {
+      const data = await API.getJSON('/api/billing/plans');
+      document.getElementById('plans-loading').style.display = 'none';
+      document.getElementById('plans-grid').style.display = 'grid';
+
+      document.getElementById('pro-price').textContent = data.pro.price.toLocaleString('ru') + ' ₽';
+
+      renderFeatures('free-features', data.free.features, 'free');
+      renderFeatures('pro-features', data.pro.features, 'pro');
+
+      // Check current user plan
+      try {
+        const user = await API.getJSON('/api/auth/me');
+        currentPlan = user.plan;
+        updateButtons(currentPlan);
+      } catch(e) {}
+    } catch(e) {
+      document.getElementById('plans-loading').textContent = 'Не удалось загрузить тарифы';
+    }
+  }
+
+  function renderFeatures(containerId, features, plan) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = features.map(f => {
+      const val = f[plan];
+      let icon, text;
+      if (val === true) { icon = '<span style="color:var(--success)">✓</span>'; text = f.name; }
+      else if (val === false) { icon = '<span style="color:var(--secondary)">✗</span>'; text = `<span style="color:var(--secondary)">${f.name}</span>`; }
+      else { icon = '<span style="color:var(--success)">✓</span>'; text = `${f.name}: <b>${val}</b>`; }
+      return `<div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">${icon} <span>${text}</span></div>`;
+    }).join('');
+  }
+
+  function updateButtons(plan) {
+    if (plan === 'pro') {
+      document.getElementById('pro-btn-zone').innerHTML = '<span style="color:var(--success); font-weight:600; display:block; text-align:center;">Ваш текущий тариф ✓</span>';
+      document.getElementById('free-btn-zone').innerHTML = '<a href="/billing" class="btn btn-secondary" style="width:100%; text-align:center; display:block;">Управление подпиской</a>';
+    }
+  }
+
+  async function subscribePro() {
+    if (!API.getToken()) { window.location = '/login'; return; }
+    try {
+      const data = await API.postJSON('/api/billing/subscribe', {
+        return_url: window.location.origin + '/billing?success=1'
+      });
+      window.location = data.confirmation_url;
+    } catch(e) {
+      const msg = e.detail || 'Ошибка при создании платежа';
+      alert(msg);
+    }
+  }
+
+  loadPlans();
+</script>
+{% endblock %}
