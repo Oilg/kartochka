@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Загрузка каталога{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:900px; margin:40px auto; padding:0 24px;">
+  <h1 style="margin-bottom:8px;">Пакетная генерация</h1>
+  <p style="color:var(--secondary); margin-bottom:32px;">Загрузите каталог товаров и сгенерируйте карточки пакетом</p>
+
+  <!-- Upgrade overlay for free users -->
+  <div id="upgrade-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:500; align-items:center; justify-content:center;">
+    <div style="background:var(--white); border-radius:12px; padding:40px; max-width:400px; text-align:center; margin:0 16px;">
+      <div style="font-size:48px; margin-bottom:16px;">🔒</div>
+      <h2 style="margin-bottom:8px;">Только для Pro</h2>
+      <p style="color:var(--secondary); margin-bottom:24px;">Пакетная генерация доступна на тарифе Pro</p>
+      <a href="/pricing" class="btn btn-primary" style="width:100%; text-align:center; display:block;">Улучшить до Pro</a>
+    </div>
+  </div>
+
+  <!-- Source tabs -->
+  <div style="display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:32px;">
+    <button class="tab-btn active" id="tab-csv" onclick="switchTab('csv')">📁 CSV / Excel</button>
+    <button class="tab-btn" id="tab-wb" onclick="switchTab('wb')">WB API</button>
+    <button class="tab-btn" id="tab-ozon" onclick="switchTab('ozon')">Ozon API</button>
+  </div>
+
+  <!-- CSV Tab -->
+  <div id="pane-csv">
+    <!-- Step 1: File upload -->
+    <div id="step1" style="margin-bottom:32px;">
+      <h3 style="margin-bottom:16px;">Шаг 1: Загрузите файл</h3>
+      <div id="drop-zone" style="border:2px dashed var(--border); border-radius:12px; padding:48px; text-align:center; cursor:pointer; transition:border-color 0.2s;">
+        <div style="font-size:48px; margin-bottom:12px;">📂</div>
+        <p style="font-weight:500; margin-bottom:4px;">Перетащите файл сюда или нажмите для выбора</p>
+        <p style="color:var(--secondary); font-size:12px;">Поддерживаются CSV и XLSX (до 10 МБ)</p>
+        <input type="file" id="catalog-file" accept=".csv,.xlsx" style="display:none;" onchange="handleFileSelect(this.files[0])">
+      </div>
+      <div id="file-info" style="display:none; margin-top:12px; padding:12px; background:#EDE9FE; border-radius:8px; display:flex; align-items:center; gap:12px;">
+        <span>📄</span>
+        <span id="file-name" style="font-weight:500;"></span>
+        <button onclick="clearFile()" style="background:none; border:none; cursor:pointer; color:var(--danger); margin-left:auto;">✕</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Column mapping -->
+    <div id="step2" style="display:none; margin-bottom:32px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <h3>Шаг 2: Маппинг колонок</h3>
+        <button class="btn btn-secondary btn-sm" onclick="autoMap()">Авто-маппинг</button>
+      </div>
+      <table class="table" id="mapping-table">
+        <thead><tr><th>Колонка в файле</th><th>Поле карточки</th></tr></thead>
+        <tbody id="mapping-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Step 3: Generation settings -->
+    <div id="step3" style="display:none;">
+      <h3 style="margin-bottom:16px;">Шаг 3: Настройки генерации</h3>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="form-group">
+          <label class="form-label">Шаблон</label>
+          <select id="csv-template" class="form-control"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Маркетплейс</label>
+          <select id="csv-marketplace" class="form-control">
+            <option value="wildberries">Wildberries</option>
+            <option value="ozon">Ozon</option>
+            <option value="universal">Универсальный</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Формат</label>
+          <select id="csv-format" class="form-control">
+            <option value="png">PNG</option>
+            <option value="jpg">JPG</option>
+            <option value="webp">WebP</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Название пакета</label>
+          <input type="text" id="csv-batch-name" class="form-control" placeholder="Мой каталог">
+        </div>
+      </div>
+      <div style="margin-top:24px;">
+        <button class="btn btn-primary" onclick="submitCsvBatch()" id="submit-btn">🚀 Начать генерацию</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WB Tab -->
+  <div id="pane-wb" style="display:none;">
+    <div id="wb-connect-status" style="margin-bottom:24px;"></div>
+    <div class="form-group">
+      <label class="form-label">Шаблон</label>
+      <select id="wb-template" class="form-control"></select>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label">Формат</label>
+      <select id="wb-format" class="form-control">
+        <option value="png">PNG</option>
+        <option value="jpg">JPG</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label">Название пакета</label>
+      <input type="text" id="wb-batch-name" class="form-control" placeholder="Импорт WB">
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="importFromMarketplace('wildberries')">Импортировать и генерировать</button>
+  </div>
+
+  <!-- Ozon Tab -->
+  <div id="pane-ozon" style="display:none;">
+    <div id="ozon-connect-status" style="margin-bottom:24px;"></div>
+    <div class="form-group">
+      <label class="form-label">Шаблон</label>
+      <select id="ozon-template" class="form-control"></select>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label">Формат</label>
+      <select id="ozon-format" class="form-control">
+        <option value="png">PNG</option>
+        <option value="jpg">JPG</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label">Название пакета</label>
+      <input type="text" id="ozon-batch-name" class="form-control" placeholder="Импорт Ozon">
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="importFromMarketplace('ozon')">Импортировать и генерировать</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/catalog.js"></script>
+<script>
+  API.requireAuth();
+  initCatalogUpload();
+</script>
+{% endblock %}

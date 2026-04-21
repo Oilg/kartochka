@@ -8,6 +8,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from kartochka.database import Base, get_db
+from kartochka.models.catalog_batch import CatalogBatch  # noqa: F401
+from kartochka.models.catalog_item import CatalogItem  # noqa: F401
+from kartochka.models.marketplace_credential import MarketplaceCredential  # noqa: F401
+from kartochka.models.subscription import Subscription  # noqa: F401
 from kartochka.models.template import Template
 from kartochka.models.user import User
 from kartochka.services.auth_service import create_access_token, hash_password

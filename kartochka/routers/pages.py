@@ -66,3 +66,50 @@ async def generation_result_page(uid: str, request: Request) -> HTMLResponse:
 @router.get("/api-docs", response_class=HTMLResponse)
 async def api_docs_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("api_docs.html", {"request": request})
+
+
+@router.get("/billing", response_class=HTMLResponse)
+async def billing_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("billing.html", {"request": request})
+
+
+@router.get("/billing/upgrade", response_class=HTMLResponse)
+async def billing_upgrade_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("pricing.html", {"request": request})
+
+
+@router.get("/pricing", response_class=HTMLResponse)
+async def pricing_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("pricing.html", {"request": request})
+
+
+@router.get("/marketplace/connect", response_class=HTMLResponse)
+async def marketplace_connect_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("marketplace_connect.html", {"request": request})
+
+
+@router.get("/catalog/upload", response_class=HTMLResponse)
+async def catalog_upload_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("catalog_upload.html", {"request": request})
+
+
+@router.get("/catalog/batches", response_class=HTMLResponse)
+async def catalog_batches_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("catalog_batches.html", {"request": request})
+
+
+@router.get("/catalog/batches/{uid}", response_class=HTMLResponse)
+async def catalog_batch_page(uid: str, request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "catalog_batch.html", {"request": request, "batch_uid": uid}
+    )
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("settings.html", {"request": request})
+
+
+@router.get("/onboarding", response_class=HTMLResponse)
+async def onboarding_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse("onboarding.html", {"request": request})

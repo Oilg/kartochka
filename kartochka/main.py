@@ -29,7 +29,16 @@ from kartochka.metrics import (
 )
 from kartochka.models.template import Template
 from kartochka.models.user import User
-from kartochka.routers import auth, generations, pages, templates, uploads
+from kartochka.routers import (
+    auth,
+    billing,
+    catalog,
+    generations,
+    marketplace_credentials,
+    pages,
+    templates,
+    uploads,
+)
 from kartochka.services.auth_service import hash_password
 from kartochka.utils.logging import logger
 from kartochka.utils.rate_limit import limiter
@@ -1291,4 +1300,7 @@ app.include_router(auth.router)
 app.include_router(templates.router)
 app.include_router(generations.router)
 app.include_router(uploads.router)
+app.include_router(billing.router)
+app.include_router(marketplace_credentials.router)
+app.include_router(catalog.router)
 app.include_router(pages.router)

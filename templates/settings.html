@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Настройки{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:700px; margin:40px auto; padding:0 24px;">
+  <h1 style="margin-bottom:32px;">Настройки</h1>
+
+  <!-- Tabs -->
+  <div style="display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:32px;">
+    <button class="tab-btn active" id="tab-profile" onclick="switchSettingsTab('profile')">Профиль</button>
+    <button class="tab-btn" id="tab-api" onclick="switchSettingsTab('api')">API ключ</button>
+    <button class="tab-btn" id="tab-notifications" onclick="switchSettingsTab('notifications')">Уведомления</button>
+  </div>
+
+  <!-- Profile tab -->
+  <div id="pane-profile">
+    <div class="card" style="background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px;">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" id="profile-email" class="form-control" readonly>
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">Имя</label>
+        <input type="text" id="profile-name" class="form-control" placeholder="Ваше имя">
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">Тариф</label>
+        <div>
+          <span id="profile-plan" class="badge">—</span>
+          <a href="/pricing" style="margin-left:12px; font-size:13px;">Изменить тариф</a>
+        </div>
+      </div>
+      <div id="profile-msg" style="margin-top:8px; font-size:13px;"></div>
+    </div>
+  </div>
+
+  <!-- API tab -->
+  <div id="pane-api" style="display:none;">
+    <div class="card" style="background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px;">
+      <p style="margin-bottom:16px;">Используйте API ключ для интеграции. Передавайте в заголовке <code>X-API-Key</code>.</p>
+      <div class="api-key-display">
+        <input type="password" class="form-control api-key-input" id="api-key-field" readonly>
+        <button class="btn btn-secondary" onclick="toggleKey()">👁</button>
+        <button class="btn btn-secondary" onclick="copyKey()">📋</button>
+        <button class="btn btn-secondary" onclick="regenerateKey()">🔄</button>
+      </div>
+      <div id="key-copied" style="font-size:12px; color:var(--success); margin-top:4px; display:none;">Скопировано!</div>
+    </div>
+  </div>
+
+  <!-- Notifications tab -->
+  <div id="pane-notifications" style="display:none;">
+    <div class="card" style="background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px;">
+      <h3 style="margin-bottom:16px;">Уведомления в Telegram</h3>
+      <p style="color:var(--secondary); margin-bottom:16px; font-size:13px;">
+        Получайте уведомления о завершении пакетной генерации в Telegram.
+        Запустите <a href="https://t.me/kartochka_bot" target="_blank">@kartochka_bot</a> и скопируйте ваш Chat ID.
+      </p>
+      <div class="form-group">
+        <label class="form-label">Telegram Chat ID</label>
+        <input type="text" id="tg-chat-id" class="form-control" placeholder="123456789">
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" id="tg-enabled" style="width:18px; height:18px;">
+          Включить уведомления в Telegram
+        </label>
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="saveNotifications()">Сохранить</button>
+      <div id="notif-msg" style="margin-top:8px; font-size:13px;"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  API.requireAuth();
+  let userData = null;
+  let keyVisible = false;
+
+  async function loadSettings() {
+    try {
+      userData = await API.getJSON('/api/auth/me');
+      document.getElementById('profile-email').value = userData.email;
+      document.getElementById('profile-name').value = userData.full_name || '';
+      const badge = document.getElementById('profile-plan');
+      badge.textContent = userData.plan === 'pro' ? 'Pro' : 'Free';
+      badge.className = `badge badge-${userData.plan}`;
+      document.getElementById('api-key-field').value = userData.api_key;
+      if (userData.telegram_chat_id) {
+        document.getElementById('tg-chat-id').value = userData.telegram_chat_id;
+      }
+      document.getElementById('tg-enabled').checked = userData.telegram_notifications || false;
+    } catch(e) {}
+  }
+
+  function switchSettingsTab(tab) {
+    ['profile', 'api', 'notifications'].forEach(t => {
+      document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+      document.getElementById(`pane-${t}`).style.display = t === tab ? 'block' : 'none';
+    });
+  }
+
+  function toggleKey() {
+    const f = document.getElementById('api-key-field');
+    keyVisible = !keyVisible;
+    f.type = keyVisible ? 'text' : 'password';
+  }
+
+  async function copyKey() {
+    if (!userData) return;
+    await navigator.clipboard.writeText(userData.api_key);
+    const el = document.getElementById('key-copied');
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 2000);
+  }
+
+  async function regenerateKey() {
+    if (!confirm('Сгенерировать новый API ключ?')) return;
+    try {
+      const data = await API.postJSON('/api/auth/regenerate-api-key', {});
+      userData.api_key = data.api_key;
+      document.getElementById('api-key-field').value = data.api_key;
+    } catch(e) {}
+  }
+
+  async function saveNotifications() {
+    const chat_id = document.getElementById('tg-chat-id').value.trim() || null;
+    const enabled = document.getElementById('tg-enabled').checked;
+    try {
+      await API.request('PATCH', '/api/auth/notifications', {
+        telegram_chat_id: chat_id,
+        telegram_notifications: enabled,
+      });
+      document.getElementById('notif-msg').textContent = 'Сохранено!';
+      document.getElementById('notif-msg').style.color = 'var(--success)';
+    } catch(e) {
+      document.getElementById('notif-msg').textContent = 'Ошибка сохранения';
+      document.getElementById('notif-msg').style.color = 'var(--danger)';
+    }
+    setTimeout(() => document.getElementById('notif-msg').textContent = '', 3000);
+  }
+
+  loadSettings();
+</script>
+{% endblock %}

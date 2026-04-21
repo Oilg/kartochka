@@ -9,7 +9,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from kartochka.database import Base
 
 if TYPE_CHECKING:
+    from kartochka.models.catalog_batch import CatalogBatch
     from kartochka.models.generation import Generation
+    from kartochka.models.marketplace_credential import MarketplaceCredential
+    from kartochka.models.subscription import Subscription
     from kartochka.models.template import Template
 
 
@@ -28,6 +31,8 @@ class User(Base):
     last_active_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
+    telegram_chat_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    telegram_notifications: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         default=func.now(), onupdate=func.now()
@@ -37,5 +42,14 @@ class User(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     generations: Mapped[list[Generation]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    marketplace_credentials: Mapped[list[MarketplaceCredential]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    catalog_batches: Mapped[list[CatalogBatch]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    subscriptions: Mapped[list[Subscription]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

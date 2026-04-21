@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Пакеты генерации{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:1000px; margin:40px auto; padding:0 24px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:32px;">
+    <div>
+      <h1 style="margin-bottom:4px;">Пакеты генерации</h1>
+      <p style="color:var(--secondary);">История всех пакетных заданий</p>
+    </div>
+    <a href="/catalog/upload" class="btn btn-primary">+ Новый пакет</a>
+  </div>
+
+  <div id="batches-loading" style="text-align:center; padding:40px; color:var(--secondary);">Загрузка...</div>
+
+  <div id="batches-empty" style="display:none; text-align:center; padding:60px;">
+    <div style="font-size:48px; margin-bottom:16px;">📦</div>
+    <h3 style="margin-bottom:8px;">Нет пакетов</h3>
+    <p style="color:var(--secondary); margin-bottom:24px;">Создайте первый пакет для генерации карточек</p>
+    <a href="/catalog/upload" class="btn btn-primary">Создать пакет</a>
+  </div>
+
+  <div id="batches-table-wrap" style="display:none;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Название</th>
+          <th>Маркетплейс</th>
+          <th>Статус</th>
+          <th>Прогресс</th>
+          <th>Создан</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="batches-tbody"></tbody>
+    </table>
+
+    <div id="pagination" style="display:flex; gap:8px; justify-content:center; margin-top:16px;"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  API.requireAuth();
+
+  let currentPage = 1;
+  const pageSize = 20;
+
+  function statusBadge(status) {
+    const map = {
+      pending: ['В очереди', 'secondary'],
+      processing: ['Генерация', 'warning'],
+      completed: ['Готово', 'success'],
+      completed_with_errors: ['С ошибками', 'warning'],
+      failed: ['Ошибка', 'danger'],
+    };
+    const [label, cls] = map[status] || [status, 'secondary'];
+    return `<span class="status-badge status-${cls}">${label}</span>`;
+  }
+
+  async function loadBatches(page) {
+    currentPage = page;
+    try {
+      const data = await API.getJSON(`/api/catalog/batches/?page=${page}&page_size=${pageSize}`);
+      document.getElementById('batches-loading').style.display = 'none';
+
+      if (data.items.length === 0 && page === 1) {
+        document.getElementById('batches-empty').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('batches-table-wrap').style.display = 'block';
+      const tbody = document.getElementById('batches-tbody');
+      tbody.innerHTML = data.items.map(b => `
+        <tr>
+          <td><a href="/catalog/batches/${b.uid}" style="font-weight:500;">${b.name}</a></td>
+          <td>${b.marketplace}</td>
+          <td>${statusBadge(b.status)}</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="flex:1; background:var(--border); border-radius:4px; height:6px;">
+                <div style="background:var(--accent); height:6px; border-radius:4px; width:${b.percentage}%;"></div>
+              </div>
+              <span style="font-size:12px; color:var(--secondary); white-space:nowrap;">${b.processed_items}/${b.total_items}</span>
+            </div>
+          </td>
+          <td style="color:var(--secondary); font-size:12px;">${new Date(b.created_at).toLocaleString('ru')}</td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <a href="/catalog/batches/${b.uid}" class="btn btn-secondary btn-sm">Открыть</a>
+              ${b.zip_path ? `<a href="/api/catalog/batches/${b.uid}/download" class="btn btn-secondary btn-sm">↓ ZIP</a>` : ''}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      // Pagination
+      const totalPages = Math.ceil(data.total / pageSize);
+      const pag = document.getElementById('pagination');
+      pag.innerHTML = '';
+      for (let p = 1; p <= totalPages; p++) {
+        const btn = document.createElement('button');
+        btn.className = `btn btn-sm ${p === page ? 'btn-primary' : 'btn-secondary'}`;
+        btn.textContent = p;
+        btn.onclick = () => loadBatches(p);
+        pag.appendChild(btn);
+      }
+    } catch(e) {
+      document.getElementById('batches-loading').textContent = 'Ошибка загрузки';
+    }
+  }
+
+  loadBatches(1);
+</script>
+{% endblock %}
