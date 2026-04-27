@@ -75,6 +75,18 @@ class PaymentService:
     ) -> None:
         from kartochka.models.user import User
 
+        # Idempotency: skip if already processed this payment
+        existing = (
+            await db.execute(
+                select(Subscription).where(
+                    Subscription.yookassa_payment_id == payment_id
+                )
+            )
+        ).scalar_one_or_none()
+        if existing:
+            logger.info("webhook_duplicate payment_id=%s — skipped", payment_id)
+            return
+
         user = (
             await db.execute(select(User).where(User.id == user_id))
         ).scalar_one_or_none()
@@ -85,6 +97,7 @@ class PaymentService:
             plan="pro",
             status="active",
             yookassa_payment_id=payment_id,
+            started_at=datetime.now(UTC),
             expires_at=datetime.now(UTC) + timedelta(days=31),
         )
         db.add(sub)
@@ -105,6 +118,14 @@ class PaymentService:
         if sub:
             sub.status = "cancelled"
             sub.cancelled_at = datetime.now(UTC)
+            # Immediately downgrade user plan — don't wait for the expiry worker
+            from kartochka.models.user import User as UserModel
+
+            db_user = (
+                await db.execute(select(UserModel).where(UserModel.id == user.id))
+            ).scalar_one_or_none()
+            if db_user:
+                db_user.plan = "free"
             await db.commit()
         return sub
 

@@ -3,6 +3,12 @@ let detectedColumns = [];
 let suggestedMapping = {};
 const KARTOCHKA_FIELDS = ['title', 'price', 'old_price', 'discount', 'brand', 'image_url', 'external_id'];
 
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : String(str);
+  return d.innerHTML;
+}
+
 async function initCatalogUpload() {
   // Check plan
   try {
@@ -91,8 +97,8 @@ function renderMappingTable(columns, suggested) {
       `<option value="${f}" ${f === suggested_val ? 'selected' : ''}>${f}</option>`
     ).join('');
     return `<tr>
-      <td style="font-family:monospace;">${col}</td>
-      <td><select class="form-control col-map" data-col="${col}">
+      <td style="font-family:monospace;">${escapeHtml(col)}</td>
+      <td><select class="form-control col-map" data-col="${escapeHtml(col)}">
         <option value="">-- не использовать --</option>${opts}
       </select></td>
     </tr>`;

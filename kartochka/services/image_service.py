@@ -190,8 +190,11 @@ async def fetch_image(src: str) -> Image.Image | None:
                 response.raise_for_status()
                 return Image.open(io.BytesIO(response.content)).convert("RGBA")
         else:
-            # Local file
-            path = Path(settings.storage_path) / "uploads" / src
+            # Local file — prevent path traversal outside uploads directory
+            uploads_root = (Path(settings.storage_path) / "uploads").resolve()
+            path = (uploads_root / src).resolve()
+            if not str(path).startswith(str(uploads_root) + "/"):
+                return None
             if path.exists():
                 return Image.open(path).convert("RGBA")
         return None

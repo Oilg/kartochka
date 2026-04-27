@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from kartochka.config import settings
 from kartochka.models.catalog_item import CatalogItem
 from kartochka.utils.helpers import generate_uid
 from kartochka.utils.logging import logger
@@ -78,6 +79,7 @@ async def _create_items_from_df(
         return s if s and s.lower() != "nan" else None
 
     count = 0
+    max_rows = settings.max_batch_size
 
     for _, row in df.iterrows():
         # Skip fully empty rows
@@ -104,6 +106,11 @@ async def _create_items_from_df(
         )
         db.add(item)
         count += 1
+        if count >= max_rows:
+            logger.warning(
+                "batch_size_limit_reached user_id=%s limit=%s", user_id, max_rows
+            )
+            break
 
     if count:
         await db.commit()

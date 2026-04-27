@@ -1,14 +1,15 @@
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class GenerationCreate(BaseModel):
     template_uid: str
     input_data: dict[str, str] = {}
-    output_format: str = "png"
-    output_width: int | None = None
-    output_height: int | None = None
+    output_format: Literal["png", "jpg", "jpeg", "webp"] = "png"
+    output_width: int | None = Field(default=None, ge=1, le=5000)
+    output_height: int | None = Field(default=None, ge=1, le=5000)
 
 
 class GenerationResponse(BaseModel):

@@ -11,19 +11,27 @@ from celery import Task
 from kartochka.utils.logging import logger
 from kartochka.workers.celery_app import celery_app
 
+# Singleton engine + session factory — created once per worker process
+_sync_engine: Any = None
+_sync_session_factory: Any = None
+
 
 def _get_sync_db() -> Any:
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
+    global _sync_engine, _sync_session_factory  # noqa: PLW0603
 
-    from kartochka.config import settings
+    if _sync_session_factory is None:
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
 
-    url = settings.database_url.replace(
-        "postgresql+asyncpg://", "postgresql+psycopg2://"
-    ).replace("sqlite+aiosqlite:///", "sqlite:///")
-    engine = create_engine(url)
-    session_factory = sessionmaker(bind=engine)
-    return session_factory()
+        from kartochka.config import settings
+
+        url = settings.database_url.replace(
+            "postgresql+asyncpg://", "postgresql+psycopg2://"
+        ).replace("sqlite+aiosqlite:///", "sqlite:///")
+        _sync_engine = create_engine(url, pool_pre_ping=True)
+        _sync_session_factory = sessionmaker(bind=_sync_engine)
+
+    return _sync_session_factory()
 
 
 def _run(coro: Coroutine[Any, Any, Any]) -> Any:
@@ -96,6 +104,7 @@ def process_batch(self: Task, batch_uid: str) -> dict[str, object]:
             "price": ["price", "Цена"],
             "brand": ["brand", "Бренд"],
             "discount": ["discount", "Скидка"],
+            "image_url": ["image_url", "фото", "photo", "image", "img"],
         }
 
         for item in items:
@@ -109,6 +118,7 @@ def process_batch(self: Task, batch_uid: str) -> dict[str, object]:
                     "price": item.price or "",
                     "brand": item.brand or "",
                     "discount": item.discount or "",
+                    "image_url": item.image_url or "",
                 }
                 for field, val in item_vals.items():
                     for key in field_map.get(field, []):
