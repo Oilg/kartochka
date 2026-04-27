@@ -4,6 +4,12 @@ let currentFilter = null;
 let currentPage = 1;
 const PAGE_SIZE = 20;
 
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : String(str);
+  return d.innerHTML;
+}
+
 async function initBatchPage(uid) {
   batchUid = uid;
   await loadBatch();
@@ -122,20 +128,27 @@ async function loadItems(filter, page) {
     }
 
     const gallery = document.getElementById('gallery');
-    gallery.innerHTML = data.items.map(item => {
+    // Store items by index so onclick doesn't need inline JSON
+    gallery._itemsCache = data.items;
+    gallery.innerHTML = data.items.map((item, idx) => {
       const imgSrc = item.output_path
         ? `/storage/generated/${item.output_path.split('/').pop()}`
         : (item.image_url || '');
       const statusColor = item.generation_status === 'completed' ? 'var(--success)'
         : item.generation_status === 'failed' ? 'var(--danger)' : 'var(--secondary)';
-      return `<div style="background:var(--white); border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer;" onclick="openItem(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-        ${imgSrc ? `<img src="${imgSrc}" alt="" style="width:100%; aspect-ratio:1; object-fit:contain;" onerror="this.style.display='none'">` : '<div style="width:100%; aspect-ratio:1; background:var(--border); display:flex; align-items:center; justify-content:center; color:var(--secondary);">Нет фото</div>'}
+      return `<div style="background:var(--white); border:1px solid var(--border); border-radius:8px; overflow:hidden; cursor:pointer;" data-item-idx="${idx}">
+        ${imgSrc ? `<img src="${escapeHtml(imgSrc)}" alt="" style="width:100%; aspect-ratio:1; object-fit:contain;" onerror="this.style.display='none'">` : '<div style="width:100%; aspect-ratio:1; background:var(--border); display:flex; align-items:center; justify-content:center; color:var(--secondary);">Нет фото</div>'}
         <div style="padding:8px;">
-          <div style="font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.title || '—'}</div>
-          <div style="font-size:11px; color:${statusColor};">${item.generation_status}</div>
+          <div style="font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(item.title || '—')}</div>
+          <div style="font-size:11px; color:${statusColor};">${escapeHtml(item.generation_status)}</div>
         </div>
       </div>`;
     }).join('');
+    // Attach click handlers safely (no inline JSON)
+    gallery.querySelectorAll('[data-item-idx]').forEach(el => {
+      const idx = parseInt(el.dataset.itemIdx, 10);
+      el.addEventListener('click', () => openItem(gallery._itemsCache[idx]));
+    });
 
     // Pagination
     const totalPages = Math.ceil(data.total / PAGE_SIZE);
@@ -173,10 +186,10 @@ function openItem(item) {
 
   document.getElementById('modal-info').innerHTML = `
     <table style="width:100%; font-size:13px;">
-      ${item.external_id ? `<tr><td style="color:var(--secondary); padding:4px 0;">Артикул</td><td>${item.external_id}</td></tr>` : ''}
-      ${item.brand ? `<tr><td style="color:var(--secondary); padding:4px 0;">Бренд</td><td>${item.brand}</td></tr>` : ''}
-      ${item.price ? `<tr><td style="color:var(--secondary); padding:4px 0;">Цена</td><td>${item.price}</td></tr>` : ''}
-      <tr><td style="color:var(--secondary); padding:4px 0;">Статус</td><td>${item.generation_status}</td></tr>
+      ${item.external_id ? `<tr><td style="color:var(--secondary); padding:4px 0;">Артикул</td><td>${escapeHtml(item.external_id)}</td></tr>` : ''}
+      ${item.brand ? `<tr><td style="color:var(--secondary); padding:4px 0;">Бренд</td><td>${escapeHtml(item.brand)}</td></tr>` : ''}
+      ${item.price ? `<tr><td style="color:var(--secondary); padding:4px 0;">Цена</td><td>${escapeHtml(item.price)}</td></tr>` : ''}
+      <tr><td style="color:var(--secondary); padding:4px 0;">Статус</td><td>${escapeHtml(item.generation_status)}</td></tr>
     </table>
   `;
   document.getElementById('item-modal').style.display = 'flex';

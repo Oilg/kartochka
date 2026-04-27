@@ -45,7 +45,9 @@ def _is_yookassa_ip(ip_str: str) -> bool:
 def _get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        # Take the LAST IP — the one appended by our trusted proxy (nginx).
+        # The first IP is user-controlled and can be spoofed.
+        return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else ""
 
 

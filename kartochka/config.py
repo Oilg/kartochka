@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -29,6 +30,21 @@ class Settings(BaseSettings):
     pro_plan_price_rub: int = 1490
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @model_validator(mode="after")
+    def check_production_secrets(self) -> "Settings":
+        if self.app_env == "production":
+            if self.secret_key == "dev-secret-key":
+                raise ValueError(
+                    "SECRET_KEY must be set to a secure random value in production. "
+                    'Generate one with: python -c "import secrets; print(secrets.token_hex(32))"'
+                )
+            if not self.encryption_key:
+                raise ValueError(
+                    "ENCRYPTION_KEY must be set in production to encrypt marketplace API keys. "
+                    'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+                )
+        return self
 
 
 @lru_cache

@@ -225,6 +225,40 @@ async def test_canvas_size_validation_valid(
 
 
 # ---------------------------------------------------------------------------
+# Path traversal — output_format validation
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_output_format_path_traversal_blocked(
+    async_client: AsyncClient,
+    auth_headers: dict,
+    sample_template,
+):
+    """output_format must only accept png/jpg/jpeg/webp — not path components."""
+    resp = await async_client.post(
+        "/api/generations/",
+        json={
+            "template_uid": sample_template.uid,
+            "input_data": {"title": "test"},
+            "output_format": "png/../../etc/passwd",
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 422  # Literal validation rejects it
+
+
+@pytest.mark.asyncio
+async def test_fetch_image_local_path_traversal_blocked():
+    """fetch_image must not allow local paths outside uploads directory."""
+    from kartochka.services.image_service import fetch_image
+
+    # Attempt to read a file outside uploads via path traversal
+    result = await fetch_image("../../etc/passwd")
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
 # Path traversal — download endpoint
 # ---------------------------------------------------------------------------
 

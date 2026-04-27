@@ -1164,10 +1164,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create static dir
     Path("static").mkdir(exist_ok=True)
 
-    # Seed demo data
-    async with async_session_maker() as session:
-        with suppress(Exception):
-            await create_demo_user_if_not_exists(session)
+    # Seed demo data — only in development/staging, never in production
+    if settings.app_env != "production":
+        async with async_session_maker() as session:
+            with suppress(Exception):
+                await create_demo_user_if_not_exists(session)
 
     logger.info("kartochka_startup complete")
     yield

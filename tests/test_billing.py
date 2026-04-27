@@ -79,6 +79,74 @@ class TestRequirePro:
         require_pro(pro_user, "Test Feature")
 
 
+class TestWebhookXForwardedFor:
+    """X-Forwarded-For spoofing: последний IP должен быть из YooKassa, не первый."""
+
+    async def test_spoofed_forwarded_for_is_rejected(
+        self, async_client: AsyncClient
+    ) -> None:
+        # Attacker puts YooKassa IP first, real IP is last → must be rejected
+        r = await async_client.post(
+            "/api/billing/webhook",
+            json={"event": "payment.succeeded", "object": {}},
+            headers={"X-Forwarded-For": "185.71.76.1, 1.2.3.4"},
+        )
+        assert r.status_code == 403
+
+    async def test_real_yookassa_ip_last_is_allowed(
+        self, async_client: AsyncClient
+    ) -> None:
+        with patch(
+            "kartochka.services.payment_service.PaymentService.handle_webhook",
+            new_callable=AsyncMock,
+        ):
+            # nginx adds YooKassa IP at the end — trusted
+            r = await async_client.post(
+                "/api/billing/webhook",
+                json={"event": "payment.succeeded", "object": {}},
+                headers={"X-Forwarded-For": "1.2.3.4, 185.71.76.1"},
+            )
+            assert r.status_code == 200
+
+
+class TestWebhookIdempotency:
+    """Повторный webhook с тем же payment_id не должен создавать вторую подписку."""
+
+    async def test_duplicate_webhook_skipped(
+        self, test_db: AsyncSession, test_user: User
+    ) -> None:
+        payment_id = "test-payment-idempotent-001"
+        sub = Subscription(
+            user_id=test_user.id,
+            plan="pro",
+            status="active",
+            yookassa_payment_id=payment_id,
+            expires_at=datetime.now(UTC) + timedelta(days=31),
+        )
+        test_db.add(sub)
+        test_user.plan = "pro"
+        await test_db.commit()
+
+        # Call _activate_pro again with the same payment_id
+        await payment_service._activate_pro(test_user.id, payment_id, test_db)
+
+        # Still only one subscription with this payment_id
+        from sqlalchemy import select as sel
+
+        subs = (
+            (
+                await test_db.execute(
+                    sel(Subscription).where(
+                        Subscription.yookassa_payment_id == payment_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        assert len(subs) == 1
+
+
 class TestSubscriptionLifecycle:
     async def test_get_subscription_none(
         self,
@@ -89,13 +157,14 @@ class TestSubscriptionLifecycle:
         assert r.status_code == 200
         assert r.json() is None
 
-    async def test_cancel_subscription(
+    async def test_cancel_subscription_downgrades_plan(
         self,
         async_client: AsyncClient,
         test_db: AsyncSession,
         test_user: User,
         auth_headers: dict[str, str],
     ) -> None:
+        """Cancellation must immediately downgrade user.plan to 'free'."""
         sub = Subscription(
             user_id=test_user.id,
             plan="pro",
@@ -103,6 +172,7 @@ class TestSubscriptionLifecycle:
             expires_at=datetime.now(UTC) + timedelta(days=30),
         )
         test_db.add(sub)
+        test_user.plan = "pro"
         await test_db.commit()
 
         r = await async_client.post("/api/billing/cancel", headers=auth_headers)
@@ -110,6 +180,10 @@ class TestSubscriptionLifecycle:
         data = r.json()
         assert data is not None
         assert data["status"] == "cancelled"
+
+        # Plan must be downgraded immediately
+        await test_db.refresh(test_user)
+        assert test_user.plan == "free"
 
 
 class TestCheckExpiredSubscriptions:

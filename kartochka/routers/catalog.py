@@ -65,6 +65,11 @@ async def upload_catalog(
 ) -> CatalogBatchResponse:
     require_pro(user, "Пакетная генерация")
 
+    if output_format not in ("png", "jpg", "jpeg", "webp"):
+        raise HTTPException(
+            400, detail="Invalid output_format. Use png, jpg, jpeg or webp."
+        )
+
     suffix = Path(file.filename or "file.csv").suffix.lower()
     if suffix not in (".csv", ".xlsx"):
         raise HTTPException(400, detail="Unsupported file type. Use CSV or XLSX.")
