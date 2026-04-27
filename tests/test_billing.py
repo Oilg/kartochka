@@ -134,12 +134,16 @@ class TestWebhookIdempotency:
         from sqlalchemy import select as sel
 
         subs = (
-            await test_db.execute(
-                sel(Subscription).where(
-                    Subscription.yookassa_payment_id == payment_id
+            (
+                await test_db.execute(
+                    sel(Subscription).where(
+                        Subscription.yookassa_payment_id == payment_id
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(subs) == 1
 
 
